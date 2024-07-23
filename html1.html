@@ -16,28 +16,7 @@
 
 
     </style>
-    <script>
-        // Пример использования query string параметров в JS
-        // Например, если URL страницы выглядит как http://example.com/?name=John&age=30
-
-        // Парсим query string параметры из URL
-        const urlParams = new URLSearchParams(window.location.search);
-
-        // Получаем значение параметра "name"
-        const name = urlParams.get('name');
-
-        // Получаем значение параметра "age" и преобразуем его в число
-        const age = parseInt(urlParams.get('age'), 10);
-
-        // Выводим данные на страницу
-        document.getElementById('output').innerHTML = `Привет, ${name}! Ваш возраст: ${age}`;
-
-
-
-
-
-
-    </script>
+ 
 </head>
 <body>
     <div id="main">
@@ -50,7 +29,7 @@
         <input type = "text" placeholder="var1" id="var1">
         <input type = "text" placeholder="var2" id="var2">
         <input type = "text" placeholder="var3" id="var3">
-        //<output id="output"></output>
+   
 
         <button id = "order">готово!</button>
     </form>
@@ -71,8 +50,13 @@
 
 
             tg.sendData("var1")
-            tg.close();
+          
             });
+
+
+         order.add.EventListener("click",() => {
+            tg.close()});
+             
     </script>
 </body>
 </html>
