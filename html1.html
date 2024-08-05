@@ -93,6 +93,7 @@
   
    clicker.addEventListener('click', function(){ //вешаем событие на нажатие html-кнопки
       a=a+1
+      tg.MainButton.setText(a);
    });
 
    Telegram.WebApp.onEvent('mainButtonClicked', function(){
