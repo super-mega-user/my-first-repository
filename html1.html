@@ -50,7 +50,7 @@
    <p class="hint">Some little hint</p> <!--Просто текст-подсказка для проверки-->
    <button id="btn" class="button">Show/Hide Main Button</button> <!--Кнопка, чтобы скрыть / показать основную кнопку-->
    <button id="btnED" class="button">Enable/Disable Main Button</button> <!--Кнопка, чтобы сделать кнопку активной/неактивной-->
-   <button id="click" class="button">крипта крипта много крипты</button>
+   <button id="clicker" class="button">крипта крипта много крипты</button>
 </body>
 
 <script>
@@ -88,14 +88,14 @@
    });
 
    
-   let click = document.getElementById("click")
+   let clicker = document.getElementById("clicker")
    let a=0
-   click.addEventListener('click', function(){ //вешаем событие на нажатие html-кнопки
+   clicker.addEventListener('click', function(){ //вешаем событие на нажатие html-кнопки
       let a=a+1
    });
 
    Telegram.WebApp.onEvent('mainButtonClicked', function(){
-      tg.sendData(a);
+      tg.sendData("hello"+str(a));
       //при клике на основную кнопку отправляем данные в строковом виде
    });
 
