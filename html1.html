@@ -1,109 +1,213 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
-   <meta charset="UTF-8">
-   <meta http-equiv="X-UA-Compatible" content="IE=edge">
-   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   <title>Test Telegram WebApps API</title>
-   <script src="https://telegram.org/js/telegram-web-app.js"></script> <!--Подключаем скрипт от телеграм-->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вкладки без JavaScript</title>
+    <style>
+        .body1 {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
 
-   <style>
-      body{
-         color: var(--tg-theme-text-color);
-         background: var(--tg-theme-bg-color);
-         display: flex;
-         flex-direction: column;
-         align-items: center;
-         font-size: 18px;
-      }
+        .tabs {
+            display: flex;
+            justify-content: space-around;
+            background-color: #f1f1f1;
+            padding: 10px;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+        }
 
-      .hint{
-         color: var(--tg-theme-hint-color);
-      }
+        .tab-button {
+            flex: 1;
+            text-align: center;
+            background: #ddd;
+            border: 1px solid #ccc;
+            padding: 10px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
 
-      .link{
-         color: var(--tg-theme-link-color);
-      }
+        .tab-button:hover {
+            background: #bbb;
+        }
 
-      .button{
-         background: var(--tg-theme-button-color);
-         color: var(--tg-theme-button-text-color);
-         border: none;
-         font-size: 18px;
-      }
+        .tab-content {
+            padding: 20px;
+            margin-bottom: 60px; /* Space for the fixed tabs */
+        }
 
-      .button:not(:last-child){
-         margin-bottom: 20px
-      }
+        .tab-content div {
+            display: none;
+        }
 
-      #usercard{
-         text-align: center;
-      }
-   </style>
+        input[type="radio"] {
+            display: none;
+        }
+
+        #tab1:checked ~ .content1,
+        #tab2:checked ~ .content2,
+        #tab3:checked ~ .content3 {
+            display: block;
+        }
+
+        .tab-content label {
+            display: block;
+            cursor: pointer;
+        }
+    </style>
+    <style>
+       body{
+          color: var(--tg-theme-text-color);
+          background: var(--tg-theme-bg-color);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          font-size: 18px;
+       }
+
+       .hint{
+          color: var(--tg-theme-hint-color);
+       }
+
+       .link{
+          color: var(--tg-theme-link-color);
+       }
+
+       .button{
+          background: var(--tg-theme-button-color);
+          color: var(--tg-theme-button-text-color);
+          border: none;
+          font-size: 18px;
+       }
+
+       .button:not(:last-child){
+          margin-bottom: 20px
+       }
+
+       #usercard{
+          text-align: center;
+       }
+
+
+
+       .image-button {
+          width: 300px;
+          height: 300px;
+          border: none;
+          background-image: url('https://gas-kvas.com/grafic/uploads/posts/2024-01/gas-kvas-com-p-znachok-bitkoina-na-prozrachnom-fone-15.png');
+          background-size: cover;
+       }
+    </style>
+
+
+    <script src="https://telegram.org/js/telegram-web-app.js"></script> <!--Подключаем скрипт от телеграм-->
+
 </head>
-
 <body>
-   <div id="usercard"> <!--Карта профиля, человека, который к нам обратился-->
-   </div>
-   <p>Just text</p> <!--Просто текст для проверки-->
-   <a class="link" href="https://mihailgok.ru">Link</a> <!--Просто ссылка для проверки-->
-   <p class="hint">Some little hint</p> <!--Просто текст-подсказка для проверки-->
-   <button id="btn" class="button">Show/Hide Main Button</button> <!--Кнопка, чтобы скрыть / показать основную кнопку-->
-   <button id="btnED" class="button">Enable/Disable Main Button</button> <!--Кнопка, чтобы сделать кнопку активной/неактивной-->
-   <button id="clicker" class="button">clicker</button>
+    <div class="tab-content">
+        <input type="radio" id="tab1" name="tabs" checked>
+        <!--<label for="tab1" class="tab-button">Вкладка 1</label>-->
+        <div class="content1">
+            <h2>Содержимое вкладки 1</h2>
+            <p>Это содержание первой вкладки.</p>
+
+            <button id="submit" class="button">submit1</button>
+            <h1 id="balance">0</h1>
+            <button id=click class="image-button"></button>
+        </div>
+
+        <input type="radio" id="tab2" name="tabs">
+        <!--<label for="tab2" class="tab-button">Вкладка 2</label>-->
+        <div class="content2">
+            <h2>Содержимое вкладки 2</h2>
+            <p>Это содержание второй вкладки.</p>
+        </div>
+<!--  -->
+        <input type="radio" id="tab3" name="tabs">
+      <!--  <label for="tab3" class="tab-button">Вкладка 3</label>-->
+        <div class="content3">
+            <h2>Содержимое вкладки 3</h2>
+            <p>Это содержание третьей вкладки.</p>
+        </div>
+    </div>
+
+    <div class="tabs">
+        <label for="tab1" class="tab-button">Вкладка 1</label>
+        <label for="tab2" class="tab-button">Вкладка 2</label>
+        <label for="tab3" class="tab-button">Вкладка 3</label>
+    </div>
 </body>
 
+<script type="module">
+      // Import the functions you need from the SDKs you need
+   import { initializeApp } from "https://www.gstatic.com/firebasejs/9.19.1/firebase-app.js";
+   import { getDatabase, ref, set, get, child, onValue } from "https://www.gstatic.com/firebasejs/9.19.1/firebase-database.js";
+   tg.MainButton.setText("Changed Text15")
+// Your web app's Firebase configuration
+   const firebaseConfig = {
+     apiKey: "AIzaSyBhLISxR41ZYKyyffiY08c_YtqYQdu85pk",
+     authDomain: "test-b5ec3.firebaseapp.com",
+     databaseURL: "https://test-b5ec3-default-rtdb.firebaseio.com",
+     projectId: "test-b5ec3",
+     storageBucket: "test-b5ec3.appspot.com",
+     messagingSenderId: "489032935342",
+     appId: "1:489032935342:web:922e8c518ad0ff6b6eca3f",
+     measurementId: "G-YNQM9CV4P3"
+   };
+// Initialize Firebase
+   const app = initializeApp(firebaseConfig);
+
+//get ref to database services
+  //  const db = getDatabase(app);
+
+   alert("1")
+
+   const dbRef = ref(getDatabase(app));
+   get(child(dbRef, 'user/' + tg.initDataUnsafe.user.id + "/var1")).then((snapshot) => {
+     if (snapshot.exists()) {
+       console.log(snapshot.val());
+       window.globalvar11=snapshot.val();
+       alert(snapshot.val());
+       alert("переменная сохранена"+globalvar11)
+     } else {
+       console.log("No data available");
+       alert("no")
+     }
+   }).catch((error) => {
+     console.error(error);
+   });
+   alert("2020")
+</script>
+
+
 <script>
-   let a=2
    let tg = window.Telegram.WebApp; //получаем объект webapp телеграма
 
    tg.expand(); //расширяем на все окно
 
-   tg.MainButton.text = "Changed Text"; //изменяем текст кнопки
-   tg.MainButton.setText(a); //изменяем текст кнопки иначе
-   tg.MainButton.textColor = "#F55353"; //изменяем цвет текста кнопки
-   tg.MainButton.color = "#143F6B"; //изменяем цвет бэкграунда кнопки
-   tg.MainButton.setParams({"color": "#143F6B"}); //так изменяются все параметры
 
-   let btn = document.getElementById("btn"); //получаем кнопку скрыть/показать
+   let a=2
 
-   btn.addEventListener('click', function(){ //вешаем событие на нажатие html-кнопки
-      tg.sendData(a)
-      if (tg.MainButton.isVisible){ //если кнопка показана
-         tg.MainButton.hide() //скрываем кнопку
-      }
-      else{ //иначе
-         tg.MainButton.show() //показываем
-         
-      }
-   });
 
-   let btnED = document.getElementById("btnED"); //получаем кнопку активировать/деактивировать
-   btnED.addEventListener('click', function(){ //вешаем событие на нажатие html-кнопки
-      if (tg.MainButton.isActive){ //если кнопка показана
-         tg.MainButton.setParams({"color": "#E0FFFF"}); //меняем цвет
-         tg.MainButton.disable() //скрываем кнопку
-      }
-      else{ //иначе
-         tg.MainButton.setParams({"color": "#143F6B"}); //меняем цвет
-         tg.MainButton.enable() //показываем
-      }
-   });
-
-   
-   let clicker = document.getElementById("clicker")
-  
-   clicker.addEventListener('click', function(){ //вешаем событие на нажатие html-кнопки
+   click.addEventListener('click', function(){ //вешаем событие на нажатие html-кнопки
       a=a+1
-      tg.MainButton.setText(a);
+
+      document.getElementById("balance").innerHTML = a+globalvar11;
+      // alert(" "+ a )
+      alert(a+globalvar11)
    });
 
-   Telegram.WebApp.onEvent('btnEDClicked', function(){
-      tg.sendData("hello");
+
+
+
+   Telegram.WebApp.onEvent('mainButtonClicked', function(){
+      tg.sendData("some string that we need to send");
       //при клике на основную кнопку отправляем данные в строковом виде
    });
-
-
 
 
    let usercard = document.getElementById("usercard"); //получаем блок usercard
@@ -125,4 +229,43 @@
    // pic.src = tg.initDataUnsafe.user.photo_url; //задаём src
    // usercard.appendChild(pic); //добавляем элемент в карточку
 </script>
+
+<script type="module">
+      // Import the functions you need from the SDKs you need
+   import { initializeApp } from "https://www.gstatic.com/firebasejs/9.19.1/firebase-app.js";
+   import { getDatabase, ref, set, get, child } from "https://www.gstatic.com/firebasejs/9.19.1/firebase-database.js";
+   tg.MainButton.setText("Changed Text10")
+// Your web app's Firebase configuration
+   const firebaseConfig = {
+     apiKey: "AIzaSyBhLISxR41ZYKyyffiY08c_YtqYQdu85pk",
+     authDomain: "test-b5ec3.firebaseapp.com",
+     databaseURL: "https://test-b5ec3-default-rtdb.firebaseio.com",
+     projectId: "test-b5ec3",
+     storageBucket: "test-b5ec3.appspot.com",
+     messagingSenderId: "489032935342",
+     appId: "1:489032935342:web:922e8c518ad0ff6b6eca3f",
+     measurementId: "G-YNQM9CV4P3"
+   };
+// Initialize Firebase
+   const app = initializeApp(firebaseConfig);
+
+//get ref to database services
+    const db = getDatabase(app);
+
+    document.getElementById("click").addEventListener('click', function(e){
+     e.preventDefault();
+     set(ref(db, 'user/' + tg.initDataUnsafe.user.id),
+     {
+
+
+       id: tg.initDataUnsafe.user.id,
+       var1: a+globalvar11
+
+     });
+        alert("Login Sucessfull  !"+ a );
+    })
+</script>
+
+
+
 </html>
