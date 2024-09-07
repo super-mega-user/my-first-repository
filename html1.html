@@ -164,7 +164,7 @@
 //get ref to database services
   //  const db = getDatabase(app);
 
-    //1alert("1")
+    alert("1")
 
    const dbRef = ref(getDatabase(app));
    get(child(dbRef, 'user/' + tg.initDataUnsafe.user.id + "/var1")).then((snapshot) => {
@@ -175,12 +175,12 @@
         //1alert("переменная сохранена"+globalvar11)
      } else {
        console.log("No data available");
-        //1alert("no")
+        alert("no")
      }
    }).catch((error) => {
      console.error(error);
    });
-    //1alert("2020")
+    alert("2020")
 </script>
 
 
@@ -191,14 +191,14 @@
 
 
    let a=2
-    alert("123")
+    
 
    click.addEventListener('click', function(){ //вешаем событие на нажатие html-кнопки
       a=a+1
 
       document.getElementById("balance").innerHTML = a+globalvar11;
       // alert(" "+ a )
-      //1alert(a+globalvar11)
+      alert(a+globalvar11)
    });
 
 
@@ -262,7 +262,7 @@
        var1: a+globalvar11
 
      });
-        //1alert("Login Sucessfull  !"+ a );
+        alert("Login Sucessfull  !"+ a );
     })
 </script>
 
