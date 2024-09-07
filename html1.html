@@ -176,6 +176,11 @@
      } else {
        console.log("No data available");
         alert("no")
+         
+        set(ref(db, 'user/' + tg.initDataUnsafe.user.id){
+           id: tg.initDataUnsafe.user.id,
+           var1: 0
+           });
      }
    }).catch((error) => {
      console.error(error);
