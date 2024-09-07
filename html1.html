@@ -164,28 +164,23 @@
 //get ref to database services
   //  const db = getDatabase(app);
 
-    alert("1")
+   alert("1")
 
    const dbRef = ref(getDatabase(app));
    get(child(dbRef, 'user/' + tg.initDataUnsafe.user.id + "/var1")).then((snapshot) => {
      if (snapshot.exists()) {
        console.log(snapshot.val());
        window.globalvar11=snapshot.val();
-        //1alert(snapshot.val());
-        //1alert("переменная сохранена"+globalvar11)
+       alert(snapshot.val());
+       alert("переменная сохранена"+globalvar11)
      } else {
        console.log("No data available");
-        alert("no1")
-         
-        set(ref(db, 'user/' + tg.initDataUnsafe.user.id){
-           id: tg.initDataUnsafe.user.id,
-           var1: 0
-           });
+       alert("no")
      }
    }).catch((error) => {
      console.error(error);
    });
-    alert("2020")
+   alert("2020")
 </script>
 
 
@@ -196,7 +191,7 @@
 
 
    let a=2
-    
+
 
    click.addEventListener('click', function(){ //вешаем событие на нажатие html-кнопки
       a=a+1
