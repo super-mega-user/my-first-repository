@@ -1,146 +1,67 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Вкладки без JavaScript</title>
-    <style>
-        .body1 {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-        }
+   <meta charset="UTF-8">
+   <meta http-equiv="X-UA-Compatible" content="IE=edge">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>Test Telegram WebApps API</title>
+   <script src="https://telegram.org/js/telegram-web-app.js"></script> <!--Подключаем скрипт от телеграм-->
 
-        .tabs {
-            display: flex;
-            justify-content: space-around;
-            background-color: #f1f1f1;
-            padding: 10px;
-            position: fixed;
-            bottom: 0;
-            width: 100%;
-        }
+   <style>
+      body{
+         color: var(--tg-theme-text-color);
+         background: var(--tg-theme-bg-color);
+         display: flex;
+         flex-direction: column;
+         align-items: center;
+         font-size: 18px;
+      }
 
-        .tab-button {
-            flex: 1;
-            text-align: center;
-            background: #ddd;
-            border: 1px solid #ccc;
-            padding: 10px;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
+      .hint{
+         color: var(--tg-theme-hint-color);
+      }
 
-        .tab-button:hover {
-            background: #bbb;
-        }
+      .link{
+         color: var(--tg-theme-link-color);
+      }
 
-        .tab-content {
-            padding: 20px;
-            margin-bottom: 60px; /* Space for the fixed tabs */
-        }
+      .button{
+         background: var(--tg-theme-button-color);
+         color: var(--tg-theme-button-text-color);
+         border: none;
+         font-size: 18px;
+      }
 
-        .tab-content div {
-            display: none;
-        }
+      .button:not(:last-child){
+         margin-bottom: 20px
+      }
 
-        input[type="radio"] {
-            display: none;
-        }
-
-        #tab1:checked ~ .content1,
-        #tab2:checked ~ .content2,
-        #tab3:checked ~ .content3 {
-            display: block;
-        }
-
-        .tab-content label {
-            display: block;
-            cursor: pointer;
-        }
-    </style>
-    <style>
-       body{
-          color: var(--tg-theme-text-color);
-          background: var(--tg-theme-bg-color);
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          font-size: 18px;
-       }
-
-       .hint{
-          color: var(--tg-theme-hint-color);
-       }
-
-       .link{
-          color: var(--tg-theme-link-color);
-       }
-
-       .button{
-          background: var(--tg-theme-button-color);
-          color: var(--tg-theme-button-text-color);
-          border: none;
-          font-size: 18px;
-       }
-
-       .button:not(:last-child){
-          margin-bottom: 20px
-       }
-
-       #usercard{
-          text-align: center;
-       }
+      #usercard{
+         text-align: center;
+      }
 
 
 
-       .image-button {
-          width: 300px;
-          height: 300px;
-          border: none;
-          background-image: url('https://gas-kvas.com/grafic/uploads/posts/2024-01/gas-kvas-com-p-znachok-bitkoina-na-prozrachnom-fone-15.png');
-          background-size: cover;
-       }
-    </style>
-
-
-    <script src="https://telegram.org/js/telegram-web-app.js"></script> <!--Подключаем скрипт от телеграм-->
-
+      .image-button {
+         width: 300px;
+         height: 300px;
+         border: none;
+         background-image: url('https://gas-kvas.com/grafic/uploads/posts/2024-01/gas-kvas-com-p-znachok-bitkoina-na-prozrachnom-fone-15.png');
+         background-size: cover;
+      }
+   </style>
 </head>
+
 <body>
-    <div class="tab-content">
-        <input type="radio" id="tab1" name="tabs" checked>
-        <!--<label for="tab1" class="tab-button">Вкладка 1</label>-->
-        <div class="content1">
-            <h2>Содержимое вкладки 1</h2>
-            <p>Это содержание первой вкладки.</p>
+   <!--<div id="usercard"> Карта профиля, человека, который к нам обратился-->
+   </div>
+   <!--<p>Just text</p> Просто текст для проверки-->
 
-            <button id="submit" class="button">submit1</button>
-            <h1 id="balance">0</h1>
-            <button id=click class="image-button"></button>
-        </div>
-
-        <input type="radio" id="tab2" name="tabs">
-        <!--<label for="tab2" class="tab-button">Вкладка 2</label>-->
-        <div class="content2">
-            <h2>Содержимое вкладки 2</h2>
-            <p>Это содержание второй вкладки.</p>
-        </div>
-<!--  -->
-        <input type="radio" id="tab3" name="tabs">
-      <!--  <label for="tab3" class="tab-button">Вкладка 3</label>-->
-        <div class="content3">
-            <h2>Содержимое вкладки 3</h2>
-            <p>Это содержание третьей вкладки.</p>
-        </div>
-    </div>
-
-    <div class="tabs">
-        <label for="tab1" class="tab-button">Вкладка 1</label>
-        <label for="tab2" class="tab-button">Вкладка 2</label>
-        <label for="tab3" class="tab-button">Вкладка 3</label>
-    </div>
+   <button id="submit" class="button">submit1</button>
+   <h1 id="balance">0</h1>
+   <button id=click class="image-button"></button>
 </body>
+
 
 <script type="module">
       // Import the functions you need from the SDKs you need
@@ -176,45 +97,6 @@
      } else {
        console.log("No data available");
        alert("no")
-           import { initializeApp } from "https://www.gstatic.com/firebasejs/9.19.1/firebase-app.js";
-           import { getDatabase, ref, set, get, child } from "https://www.gstatic.com/firebasejs/9.19.1/firebase-database.js";
-           tg.MainButton.setText("Changed Text10")
-        // Your web app's Firebase configuration
-           const firebaseConfig = {
-             apiKey: "AIzaSyBhLISxR41ZYKyyffiY08c_YtqYQdu85pk",
-             authDomain: "test-b5ec3.firebaseapp.com",
-             databaseURL: "https://test-b5ec3-default-rtdb.firebaseio.com",
-             projectId: "test-b5ec3",
-             storageBucket: "test-b5ec3.appspot.com",
-             messagingSenderId: "489032935342",
-             appId: "1:489032935342:web:922e8c518ad0ff6b6eca3f",
-             measurementId: "G-YNQM9CV4P3"
-           };
-        // Initialize Firebase
-           const app = initializeApp(firebaseConfig);
-        
-        //get ref to database services
-            const db = getDatabase(app);
-        
-            
-             set(ref(db, 'user/' + tg.initDataUnsafe.user.id),
-             {
-        
-        
-               id: tg.initDataUnsafe.user.id,
-               var1: 0
-        
-             });
-                alert("Login Sucessfull  !"+ a );
-            })
-
-
-
-
-
-
-
-         
      }
    }).catch((error) => {
      console.error(error);
@@ -235,9 +117,8 @@
    click.addEventListener('click', function(){ //вешаем событие на нажатие html-кнопки
       a=a+1
 
-      document.getElementById("balance").innerHTML = a+globalvar11;
+      document.getElementById("balance").innerHTML = a;
       // alert(" "+ a )
-      alert(a+globalvar11)
    });
 
 
@@ -298,13 +179,12 @@
 
 
        id: tg.initDataUnsafe.user.id,
-       var1: a+globalvar11
+       var1: a
 
      });
         alert("Login Sucessfull  !"+ a );
     })
 </script>
-
 
 
 </html>
