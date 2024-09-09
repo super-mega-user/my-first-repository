@@ -64,7 +64,7 @@
    
 <script type="module">
    alert('script1');
-   alert('script12');
+   alert('script123');
    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.19.1/firebase-app.js";
    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.19.1/firebase-auth.js";
    //alert('import')
@@ -82,7 +82,8 @@
    const app = initializeApp(firebaseConfig);
 
    const auth = getAuth(app);
-   const email =str(tg.initDataUnsafe.user.id+'@example.com');
+   const email =str(tg.initDataUnsafe.user.id)+'@example.com';
+   alert(email)
    const password='secretPassword';
    signInWithEmailAndPassword(auth, email, password)
      .then((userCredential) => {
