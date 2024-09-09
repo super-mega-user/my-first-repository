@@ -73,7 +73,7 @@ let password = 'secretPassword'
 signInWithEmailAndPassword(auth, str(tg.initDataUnsafe.user.id)+"@example.com", password)
   .then((userCredential) => {
     // Signed in 
-     alert(login)
+     alert('login')
     const user = userCredential.user;
     // ...
   })
