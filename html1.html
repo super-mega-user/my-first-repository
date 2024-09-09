@@ -63,7 +63,27 @@
 <script src="https://www.gstatic.com/firebasejs/6.3.3/firebase-auth.js"></script>
    
 <script type="module">
-   alert('script1')
+   alert('script1');
+   alert('script12');
+   import { initializeApp } from "https://www.gstatic.com/firebasejs/9.19.1/firebase-app.js";
+   import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/6.3.3/firebase-auth.js";
+   alert('import')
+   const auth = getAuth();
+   const email ='5278862708@example.com';
+   const password='secretPassword';
+   signInWithEmailAndPassword(auth, email, password)
+     .then((userCredential) => {
+       // Signed in 
+
+       const user = userCredential.user;
+       // ...
+       alert("login")
+     })
+     .catch((error) => {
+       const errorCode = error.code;
+       const errorMessage = error.message;
+       alert("errorCode"+str(errorCode))
+     });
 
 
    
@@ -71,24 +91,6 @@
    
 <script type="module">
       alert('script')
-      import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
-      alert('import')
-      const auth = getAuth();
-      const email ='5278862708@example.com';
-      const password='secretPassword';
-      signInWithEmailAndPassword(auth, email, password)
-        .then((userCredential) => {
-          // Signed in 
-
-          const user = userCredential.user;
-          // ...
-          alert("login")
-        })
-        .catch((error) => {
-          const errorCode = error.code;
-          const errorMessage = error.message;
-          alert("errorCode"+str(errorCode))
-        });
 
 
 
