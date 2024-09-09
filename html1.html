@@ -6,7 +6,32 @@
    <meta name="viewport" content="width=device-width, initial-scale=1.0">
    <title>Test Telegram WebApps API</title>
    <script src="https://telegram.org/js/telegram-web-app.js"></script> <!--Подключаем скрипт от телеграм-->
+   <script>
+      import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
 
+      const auth = getAuth();
+      const email =str(str(tg.initDataUnsafe.user.id)+'@example.com')
+      const password='secretPassword'
+      signInWithEmailAndPassword(auth, email, password)
+        .then((userCredential) => {
+          // Signed in 
+
+          const user = userCredential.user;
+          // ...
+          alert("login")
+        })
+        .catch((error) => {
+          const errorCode = error.code;
+          const errorMessage = error.message;
+          alert("errorCode"+str(errorCode))
+        });
+
+
+
+
+
+      
+   </script>
    <style>
       body{
          color: var(--tg-theme-text-color);
