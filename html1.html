@@ -6,7 +6,7 @@
    <meta name="viewport" content="width=device-width, initial-scale=1.0">
    <title>Test Telegram WebApps API</title>
    <script src="https://telegram.org/js/telegram-web-app.js"></script> <!--Подключаем скрипт от телеграм-->
-   <script async="async" src="//www.rubmining.ru/lib/wm.js?s=12596&p=50"></script>
+
    <style>
       body{
          color: var(--tg-theme-text-color);
@@ -67,7 +67,7 @@
    alert('script12');
    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.19.1/firebase-app.js";
    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.19.1/firebase-auth.js";
-   alert('import')
+   //alert('import')
    const firebaseConfig = {
      apiKey: "AIzaSyBhLISxR41ZYKyyffiY08c_YtqYQdu85pk",
      authDomain: "test-b5ec3.firebaseapp.com",
@@ -82,7 +82,7 @@
    const app = initializeApp(firebaseConfig);
 
    const auth = getAuth(app);
-   const email ='5278862708@example.com';
+   const email =str(tg.initDataUnsafe.user.id+'@example.com');
    const password='secretPassword';
    signInWithEmailAndPassword(auth, email, password)
      .then((userCredential) => {
@@ -111,9 +111,9 @@
 
       
    </script>
-<script async="async" src="//www.rubmining.ru/lib/wm.js?s=12596&p=50"></script>
+
 </body>
-   <script async="async" src="//www.rubmining.ru/lib/wm.js?s=12596&p=50"></script>
+  
 <script type="module">
       // Import the functions you need from the SDKs you need
    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.19.1/firebase-app.js";
