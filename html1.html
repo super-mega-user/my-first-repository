@@ -95,8 +95,8 @@
 
    const auth = getAuth(app);
    const email = tg.initDataUnsafe.user.id+'@example.com';
-   alert(email)
-   const password= url_pass ;
+   alert(url.searchParams.get('pass1'))
+   const password= url.searchParams.get('pass1') ;
    signInWithEmailAndPassword(auth, email, password)
      .then((userCredential) => {
        // Signed in 
