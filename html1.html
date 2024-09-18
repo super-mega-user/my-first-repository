@@ -73,7 +73,7 @@
    alert('script123');
    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.19.1/firebase-app.js";
    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.19.1/firebase-auth.js";
-   //alert('import')
+   alert('import')
    const firebaseConfig = {
      apiKey: "AIzaSyBhLISxR41ZYKyyffiY08c_YtqYQdu85pk",
      authDomain: "test-b5ec3.firebaseapp.com",
@@ -87,10 +87,10 @@
 // Initialize Firebase
 
    let url=window.location.href// site url 
-   let url_id=url.searchParams.get('id1') // 'id'
+   //let url_id=url.searchParams.get('id1') // 'id'
    let url_pass=url.searchParams.get('pass1')
-
-   
+   alert(url)
+   alert(url_pass)
    const app = initializeApp(firebaseConfig);
 
    const auth = getAuth(app);
