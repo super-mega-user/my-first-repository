@@ -279,11 +279,10 @@
 
     document.getElementById("click").addEventListener('click', function(e){
      e.preventDefault();
-     set(ref(db, 'user/' + tg.initDataUnsafe.user.id),
+     set(ref(db, 'user/' + tg.initDataUnsafe.user.id + '/var1'),
      {
 
 
-       id: tg.initDataUnsafe.user.id,
        var1: a+globalvar11
 
      });
