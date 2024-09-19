@@ -85,18 +85,20 @@
      measurementId: "G-YNQM9CV4P3"
    };
 // Initialize Firebase
-
-   let url=window.location// site url 
-   //let url_id=url.searchParams.get('id1') // 'id'
-   let url_pass=url.searchParams.get('pass1')
-   alert(url)
-   alert(url_pass)
+   const queryString = window.location.search;
+   const urlParams = new URLSearchParams(queryString);
+   const id1=urlParams.get('color')   // purple
+   const pass1=urlParams.get('size')    // M
+   const urlParams.get('nothing') // empty string
+   alert(id1)
+   alert(pass1)
+   
    const app = initializeApp(firebaseConfig);
 
    const auth = getAuth(app);
    const email = tg.initDataUnsafe.user.id+'@example.com';
-   alert(url.searchParams.get('pass1'))
-   const password= url.searchParams.get('pass1') ;
+
+   const password= pass1 ;
    signInWithEmailAndPassword(auth, email, password)
      .then((userCredential) => {
        // Signed in 
