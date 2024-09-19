@@ -87,12 +87,14 @@
 // Initialize Firebase
    const queryString = window.location.search;
    const urlParams = new URLSearchParams(queryString);
-   const id1=urlParams.get('color')   // purple
-   const pass1=urlParams.get('size')    // M
-   const urlParams.get('nothing') // empty string
+   const id1=urlParams.get('id1')   // id1
+   const pass1=urlParams.get('pass1')    // M
+   //const urlParams.get('nothing') // empty string
    alert(id1)
    alert(pass1)
-   
+   const id=tg.initDataUnsafe.user.id
+   if (id1 == id) alert("id=id1")
+
    const app = initializeApp(firebaseConfig);
 
    const auth = getAuth(app);
