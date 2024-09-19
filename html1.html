@@ -109,12 +109,12 @@
        const user = userCredential.user;
        // ...
        alert("login")
-       fgetdata(data="var1")
+       fgetdata("var1")
      })
      .catch((error) => {
        const errorCode = error.code;
        const errorMessage = error.message;
-       alert("errorCode"+str(errorCode))
+       alert("errorCode"+errorCode)
      });
 
 
@@ -160,6 +160,8 @@
 
    const dbRef = ref(getDatabase(app));
    function fgetdata(data) {
+      alert("database")
+      const dbRef = ref(getDatabase(app));
       get(child(dbRef, 'user/' + tg.initDataUnsafe.user.id + "/var1")).then((snapshot) => {
         if (snapshot.exists()) {
           console.log(snapshot.val());
