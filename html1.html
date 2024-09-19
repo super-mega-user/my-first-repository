@@ -88,27 +88,26 @@
    alert("1")
 
    const dbRef = ref(getDatabase(app));
-   function fgetdata(data) {
-      alert("database")
-      const dbRef = ref(getDatabase(app));
-      get(child(dbRef, 'user/' + tg.initDataUnsafe.user.id + "/var1")).then((snapshot) => {
-        if (snapshot.exists()) {
-          console.log(snapshot.val());
-          var vardata=snapshot.val();
-          window.globalvar11=snapshot.val();
-          alert(snapshot.val());
-          return vardata
-          //alert("переменная сохранена"+globalvar11)
-        } else {
-          console.log("No data available");
-          alert("no")
-        }
-      }).catch((error) => {
-        console.error(error);
-      });
-      alert("2020")
-      return vardata
-   }
+
+   alert("database")
+   const dbRef = ref(getDatabase(app));
+   get(child(dbRef, 'user/' + tg.initDataUnsafe.user.id + "/var1")).then((snapshot) => {
+     if (snapshot.exists()) {
+       console.log(snapshot.val());
+       var vardata=snapshot.val();
+       window.globalvar11=snapshot.val();
+       alert(snapshot.val());      
+       //alert("переменная сохранена"+globalvar11)
+     } else {
+       console.log("No data available");
+       alert("no")
+     }
+   }).catch((error) => {
+     console.error(error);
+   });
+   alert("2020")
+  
+   
 </script>
 
 <script type="module">
@@ -165,7 +164,32 @@
        const errorMessage = error.message;
        alert("errorCode"+errorCode)
      });
-      fgetdata("var1")
+       const app = initializeApp(firebaseConfig);
+
+        //get ref to database services                                              getdatabase
+     //  const db = getDatabase(app);
+   
+      alert("1")
+   
+      const dbRef = ref(getDatabase(app));
+   
+      alert("database")
+      const dbRef = ref(getDatabase(app));
+      get(child(dbRef, 'user/' + tg.initDataUnsafe.user.id + "/var1")).then((snapshot) => {
+        if (snapshot.exists()) {
+          console.log(snapshot.val());
+          var vardata=snapshot.val();
+          window.globalvar11=snapshot.val();
+          alert(snapshot.val());      
+          //alert("переменная сохранена"+globalvar11)
+        } else {
+          console.log("No data available");
+          alert("no")
+        }
+      }).catch((error) => {
+        console.error(error);
+      });
+      alert("2020")
 
    
 </script>
