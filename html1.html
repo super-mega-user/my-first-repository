@@ -91,7 +91,7 @@
 
    alert("database")
    //const dbRef = ref(getDatabase(app));
-   get(child(dbRef, 'user/' + tg.initDataUnsafe.user.id + "/var1")).then((snapshot) => {
+   get(child(dbRef, 'user/' + tg.initDataUnsafe.user.id + "/var1/var1")).then((snapshot) => {
      if (snapshot.exists()) {
        console.log(snapshot.val());
        var vardata=snapshot.val();
