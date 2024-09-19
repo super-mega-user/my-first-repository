@@ -109,7 +109,7 @@
        const user = userCredential.user;
        // ...
        alert("login")
-       fgetdata("var1")
+       let a=fgetdata("var1")
      })
      .catch((error) => {
        const errorCode = error.code;
@@ -168,6 +168,7 @@
           var vardata=snapshot.val();
           window.globalvar11=snapshot.val();
           alert(snapshot.val());
+          return vardata
           //alert("переменная сохранена"+globalvar11)
         } else {
           console.log("No data available");
