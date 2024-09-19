@@ -165,6 +165,7 @@
       get(child(dbRef, 'user/' + tg.initDataUnsafe.user.id + "/var1")).then((snapshot) => {
         if (snapshot.exists()) {
           console.log(snapshot.val());
+          var vardata=snapshot.val();
           window.globalvar11=snapshot.val();
           alert(snapshot.val());
           //alert("переменная сохранена"+globalvar11)
@@ -176,6 +177,7 @@
         console.error(error);
       });
       alert("2020")
+      return vardata
    }
 </script>
 
