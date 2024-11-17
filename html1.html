@@ -52,25 +52,30 @@
       }
 
     .content {
-        border: 1px solid #ccc;
-        padding: 20px;
-    }
-    .tabs {
-        display: flex;
-        cursor: pointer;
-        margin-top: 10px;
-    }
-    .tab {
-        padding: 10px 20px;
-        border: 1px solid #ccc;
-        border-top: none;
-        background: #f1f1f1;
-        margin-right: 5px;
-    }
-    .tab.active {
-        background: white;
-        border-top: 2px solid blue;
-    }
+            flex: 1; /* Занимает оставшееся пространство */
+            border: 1px solid #ccc;
+            padding: 20px;
+            overflow: auto; /* Прокрутка, если содержимое превышает высоту */
+        }
+        .tabs {
+            display: flex;
+            cursor: pointer;
+            position: fixed; /* Закрепляем вкладки */
+            bottom: 0; /* Привязываем к низу */
+            width: 100%; /* Ширина на всю страницу */
+            background: #f1f1f1; /* Фон для вкладок */
+        }
+        .tab {
+            padding: 10px 20px;
+            border: 1px solid #ccc;
+            border-top: none;
+            background: #f1f1f1;
+            margin-right: 5px;
+        }
+        .tab.active {
+            background: white;
+            border-top: 2px solid blue;
+        }
    </style>
 </head>
 <body>
