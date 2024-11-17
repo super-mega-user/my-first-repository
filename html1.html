@@ -1,6 +1,6 @@
 <!DOCTYPE html>
-<html>
-<head>
+<html lang="ru">
+<head><head>
    <meta charset="UTF-8">
    <meta http-equiv="X-UA-Compatible" content="IE=edge">
    <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,6 +8,7 @@
    <script src="https://telegram.org/js/telegram-web-app.js"></script> <!--Подключаем скрипт от телеграм-->
 
    <style>
+
       body{
          color: var(--tg-theme-text-color);
          background: var(--tg-theme-bg-color);
@@ -49,24 +50,71 @@
          background-image: url('https://gas-kvas.com/grafic/uploads/posts/2024-01/gas-kvas-com-p-znachok-bitkoina-na-prozrachnom-fone-15.png');
          background-size: cover;
       }
+
+    .content {
+        border: 1px solid #ccc;
+        padding: 20px;
+    }
+    .tabs {
+        display: flex;
+        cursor: pointer;
+        margin-top: 10px;
+    }
+    .tab {
+        padding: 10px 20px;
+        border: 1px solid #ccc;
+        border-top: none;
+        background: #f1f1f1;
+        margin-right: 5px;
+    }
+    .tab.active {
+        background: white;
+        border-top: 2px solid blue;
+    }
    </style>
 </head>
-
 <body>
-   <!--<div id="usercard"> Карта профиля, человека, который к нам обратился-->
-   </div>
-   <!--<p>Just text</p> Просто текст для проверки-->
 
-   <button id="submit" class="button">submit1</button>
-   <h1 id="balance">0</h1>
-   <button id=click class="image-button"></button>
+
+<div class="content" id="content1">
+    <button onclick="showAlert()">Нажми меня</button>
+    <button id="submit" class="button">submit1</button>
+    <h1 id="balance">0</h1>
+    <button id=click class="image-button"></button>
+</div>
+<div class="content" id="content2" style="display:none;">
+    <p>Содержимое второй вкладки.</p>
+</div>
+
+
+<div class="tabs">
+    <div class="tab active" onclick="showTab(1)">Вкладка 1</div>
+    <div class="tab" onclick="showTab(2)">Вкладка 2</div>
+</div>
+
+
+
+<script>
+    function showTab(tabIndex) {
+        document.querySelectorAll('.content').forEach((content, index) => {
+            content.style.display = index === tabIndex - 1 ? 'block' : 'none';
+        });
+        document.querySelectorAll('.tab').forEach((tab, index) => {
+            tab.classList.toggle('active', index === tabIndex - 1);
+        });
+    }
+
+    function showAlert() {
+        alert('123');
+    }
+</script>
 <script src="https://www.gstatic.com/firebasejs/9.19.1/firebase-auth.js"></script>
 
 
-<script> 
+<script>
    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js"; //////////////////////////////////////////////////////  captha  //////////////////////
    import { initializeAppCheck, ReCaptchaV3Provider } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-app-check.js';
-   
+
    const app = initializeApp({
      apiKey: "AIzaSyBhLISxR41ZYKyyffiY08c_YtqYQdu85pk",
      authDomain: "test-b5ec3.firebaseapp.com",
@@ -76,24 +124,24 @@
      messagingSenderId: "489032935342",
      appId: "1:489032935342:web:922e8c518ad0ff6b6eca3f",
      measurementId: "G-YNQM9CV4P3"
-   
 
-   
+
+
    });
-   
+
    // Pass your reCAPTCHA v3 site key (public key) to activate(). Make sure this
    // key is the counterpart to the secret key you set in the Firebase console.
    const appCheck = initializeAppCheck(app, {
      provider: new ReCaptchaV3Provider('6LflVkoqAAAAACuPDCRiL3_dQOFeHwbZ8fvBzCEC'),
-   
+
      // Optional argument. If true, the SDK automatically refreshes App Check
      // tokens as needed.
      isTokenAutoRefreshEnabled: true
    });
 
-      
+
 </script>
-   
+
 <script type="module">///////////////////////////////////////////////////////////////////////////////set f fgetdatabase
       // Import the functions you need from the SDKs you need
    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.19.1/firebase-app.js";
@@ -127,7 +175,7 @@
        console.log(snapshot.val());
        var vardata=snapshot.val();
        window.globalvar11=snapshot.val();
-       alert(snapshot.val());      
+       alert(snapshot.val());
        //alert("переменная сохранена"+globalvar11)
      } else {
        console.log("No data available");
@@ -137,8 +185,8 @@
      console.error(error);
    });
    alert("2020")
-  
-   
+
+
 </script>
 
 <script type="module">
@@ -146,7 +194,7 @@
 
 </script>
 
-   
+
 <script type="module">
    alert('script1');
    alert('script123');
@@ -180,10 +228,10 @@
    const email = tg.initDataUnsafe.user.id+'@example.com';
 
    const password= pass1 ;
-   
+
    signInWithEmailAndPassword(auth, email, password)
      .then((userCredential) => {
-       // Signed in 
+       // Signed in
 
        const user = userCredential.user;
        // ...
@@ -199,11 +247,11 @@
 
         //get ref to database services                                              getdatabase
      //  const db = getDatabase(app);
-   
+
       alert("1")
-   
+
       const dbRef = ref(getDatabase(app));
-   
+
       alert("database")
      // const dbRef = ref(getDatabase(app));
       get(child(dbRef, 'user/' + tg.initDataUnsafe.user.id + "/var1")).then((snapshot) => {
@@ -211,7 +259,7 @@
           console.log(snapshot.val());
           var vardata=snapshot.val();
           window.globalvar11=snapshot.val();
-          alert(snapshot.val());      
+          alert(snapshot.val());
           //alert("переменная сохранена"+globalvar11)
         } else {
           console.log("No data available");
@@ -222,9 +270,9 @@
       });
       alert("2020")
 
-   
+
 </script>
-   
+
 <script type="module">
       alert('script')
       alert(window.location.href)
@@ -233,11 +281,9 @@
 
 
 
-      
-   </script>
 
+</script>
 </body>
-  
 
 
 <script>
@@ -320,6 +366,6 @@
         //alert("Login Sucessfull  !"+ a );
     })
 </script>
-
-
 </html>
+
+
