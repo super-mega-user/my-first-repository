@@ -3,7 +3,7 @@
 <head>
    <meta charset="UTF-8">
    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   <title>test3</title>
+   <title>Hamster Kombat Clone</title>
    <script src="https://telegram.org/js/telegram-web-app.js"></script>
    <style>
       :root {
@@ -149,6 +149,7 @@
    <script type="module">
       import { initializeApp } from "https://www.gstatic.com/firebasejs/9.19.1/firebase-app.js";
       import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/9.19.1/firebase-database.js";
+      import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.19.1/firebase-auth.js";
 
       const firebaseConfig = {
          apiKey: "AIzaSyBhLISxR41ZYKyyffiY08c_YtqYQdu85pk",
@@ -163,6 +164,7 @@
 
       const app = initializeApp(firebaseConfig);
       const db = getDatabase(app);
+      const auth = getAuth(app);
       const tg = window.Telegram.WebApp;
       tg.expand();
 
@@ -171,12 +173,36 @@
       let maxEnergy = 100;
       let clickPower = 1;
       let autoClicker = 0;
+      let userId = null;
 
-      const userId = tg.initDataUnsafe.user?.id;
-      if (!userId) {
-         alert("Error: Unable to get Telegram user ID");
+      // Extract pass1 from URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const pass1 = urlParams.get("pass1");
+
+      // Get Telegram user ID
+      userId = tg.initDataUnsafe.user?.id;
+      if (!userId || !pass1) {
+         alert("Error: Unable to get Telegram user ID or password");
          tg.close();
-      } else {
+         return;
+      }
+
+      // Authenticate with Firebase
+      const email = userId + "@example.com";
+      signInWithEmailAndPassword(auth, email, pass1)
+         .then((userCredential) => {
+            // Successful login
+            console.log("Authenticated:", userCredential.user.uid);
+            initializeUserData();
+         })
+         .catch((error) => {
+            console.error("Authentication error:", error);
+            alert("Authentication failed: " + error.message);
+            tg.close();
+         });
+
+      // Initialize user data after authentication
+      function initializeUserData() {
          const userRef = ref(db, "users/" + userId);
          onValue(userRef, (snapshot) => {
             if (snapshot.exists()) {
@@ -186,10 +212,14 @@
                clickPower = data.clickPower || 1;
                autoClicker = data.autoClicker || 0;
                updateUI();
+            } else {
+               // Initialize new user
+               saveData();
+               updateUI();
             }
          }, (error) => {
             console.error("Firebase error:", error);
-            alert("Failed to load user data");
+            alert("Failed to load user data: " + error.message);
          });
       }
 
