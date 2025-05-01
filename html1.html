@@ -3,7 +3,7 @@
 <head>
    <meta charset="UTF-8">
    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   <title>clicker</title>
+   <title>Hamster Kombat Clone</title>
    <script src="https://telegram.org/js/telegram-web-app.js"></script>
    <style>
       :root {
@@ -126,28 +126,28 @@
       <div id="boosts">
          <div class="boost-item">
             <span>Click Power +1</span>
-            <button class="button" onclick="buyBoost('clickPower', 100)">Buy (100)</button>
+            <button class="button boost-click-power">Buy (100)</button>
          </div>
          <div class="boost-item">
             <span>Auto Clicker</span>
-            <button class="button" onclick="buyBoost('autoClicker', 500)">Buy (500)</button>
+            <button class="button boost-auto-clicker">Buy (500)</button>
          </div>
       </div>
    </div>
    <div class="content" id="content3" style="display:none;">
       <h2>Friends</h2>
       <p>Invite friends to earn bonuses!</p>
-      <button class="button" onclick="inviteFriend()">Invite Friend</button>
-   </div>
-   <div class="tabs">
-      <div class="tab active" onclick="showTab(1)">Click</div>
-      <div class="tab" onclick="showTab(2)">Boost</div>
-      <div class="tab" onclick="showTab(3)">Friends</div>
+      <button class="button invite-friend">Invite Friend</button>
    </div>
 
+   <div class="tabs">
+      <div class="tab active" data-tab="1">Click</div>
+      <div class="tab" data-tab="2">Boost</div>
+      <div class="tab" data-tab="3">Friends</div>
+   </div>
    <script type="module">
       import { initializeApp } from "https://www.gstatic.com/firebasejs/9.19.1/firebase-app.js";
-      import { getDatabase, ref, set, get, child, onValue } from "https://www.gstatic.com/firebasejs/9.19.1/firebase-database.js";
+      import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/9.19.1/firebase-database.js";
 
       const firebaseConfig = {
          apiKey: "AIzaSyBhLISxR41ZYKyyffiY08c_YtqYQdu85pk",
@@ -171,24 +171,23 @@
       let clickPower = 1;
       let autoClicker = 0;
 
-      // Load user data
       const userId = tg.initDataUnsafe.user?.id;
       if (!userId) {
          alert("Error: Unable to get Telegram user ID");
-         return;
+         tg.close();
+      } else {
+         const userRef = ref(db, users/${userId});
+         onValue(userRef, (snapshot) => {
+            if (snapshot.exists()) {
+               const data = snapshot.val();
+               balance = data.balance || 0;
+               energy = data.energy || maxEnergy;
+               clickPower = data.clickPower || 1;
+               autoClicker = data.autoClicker || 0;
+               updateUI();
+            }
+         });
       }
-
-      const userRef = ref(db, users/${userId});
-      onValue(userRef, (snapshot) => {
-         if (snapshot.exists()) {
-            const data = snapshot.val();
-            balance = data.balance || 0;
-            energy = data.energy || maxEnergy;
-            clickPower = data.clickPower || 1;
-            autoClicker = data.autoClicker || 0;
-            updateUI();
-         }
-      });
 
       // Click handler
       document.getElementById("click").addEventListener('click', () => {
@@ -221,7 +220,8 @@
 
       // Save data to Firebase
       function saveData() {
-         set(userRef, {
+         if (!userId) return;
+         set(ref(db, users/${userId}), {
             balance,
             energy,
             clickPower,
@@ -239,7 +239,7 @@
       }
 
       // Buy boost
-      window.buyBoost = function(type, cost) {
+      function buyBoost(type, cost) {
          if (balance >= cost) {
             balance -= cost;
             if (type === 'clickPower') {
@@ -252,24 +252,37 @@
          } else {
             alert("Not enough coins!");
          }
-      };
+      }
 
       // Invite friend
-      window.inviteFriend = function() {
+      function inviteFriend() {
          const inviteLink = https://t.me/your_bot?start=${userId};
          tg.openTelegramLink(https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=Join my game!);
-      };
+      }
 
       // Tab navigation
-      window.showTab = function(tabIndex) {
-
-document.querySelectorAll('.content').forEach((content, index) => {
+      function showTab(tabIndex) {
+         document.querySelectorAll('.content').forEach((content, index) => {
             content.style.display = index === tabIndex - 1 ? 'block' : 'none';
          });
          document.querySelectorAll('.tab').forEach((tab, index) => {
             tab.classList.toggle('active', index === tabIndex - 1);
          });
-      };
+      }
+      // Bind tab events
+      document.querySelectorAll('.tab').forEach(tab => {
+         tab.addEventListener('click', () => {
+            const tabIndex = parseInt(tab.getAttribute('data-tab'));
+            showTab(tabIndex);
+         });
+      });
+
+      // Bind boost buttons
+      document.querySelector('.boost-click-power').addEventListener('click', () => buyBoost('clickPower', 100));
+      document.querySelector('.boost-auto-clicker').addEventListener('click', () => buyBoost('autoClicker', 500));
+
+      // Bind invite button
+      document.querySelector('.invite-friend').addEventListener('click', inviteFriend);
    </script>
 </body>
 </html>
