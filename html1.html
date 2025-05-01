@@ -1,378 +1,275 @@
 <!DOCTYPE html>
 <html lang="ru">
-<head><head>
+<head>
    <meta charset="UTF-8">
-   <meta http-equiv="X-UA-Compatible" content="IE=edge">
    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   <title>Test Telegram WebApps API</title>
-   <script src="https://telegram.org/js/telegram-web-app.js"></script> <!--Подключаем скрипт от телеграм-->
-
+   <title>Hamster Kombat Clone</title>
+   <script src="https://telegram.org/js/telegram-web-app.js"></script>
    <style>
+      :root {
+         --tg-theme-bg-color: #ffffff;
+         --tg-theme-text-color: #000000;
+         --tg-theme-hint-color: #999999;
+         --tg-theme-link-color: #007bff;
+         --tg-theme-button-color: #007bff;
+         --tg-theme-button-text-color: #ffffff;
+      }
 
-      body{
+      body {
+         margin: 0;
+         font-family: Arial, sans-serif;
          color: var(--tg-theme-text-color);
          background: var(--tg-theme-bg-color);
          display: flex;
          flex-direction: column;
          align-items: center;
+         min-height: 100vh;
          font-size: 18px;
       }
 
-      .hint{
-         color: var(--tg-theme-hint-color);
+      .content {
+         flex: 1;
+         padding: 20px;
+         width: 100%;
+         max-width: 600px;
+         box-sizing: border-box;
+         overflow-y: auto;
       }
 
-      .link{
-         color: var(--tg-theme-link-color);
+      .tabs {
+         display: flex;
+         position: fixed;
+         bottom: 0;
+         width: 100%;
+         max-width: 600px;
+         background: var(--tg-theme-bg-color);
+         box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
       }
 
-      .button{
-         background: var(--tg-theme-button-color);
-         color: var(--tg-theme-button-text-color);
-         border: none;
-         font-size: 18px;
-      }
-
-      .button:not(:last-child){
-         margin-bottom: 20px
-      }
-
-      #usercard{
+      .tab {
+         flex: 1;
+         padding: 15px;
          text-align: center;
+         cursor: pointer;
+         border-top: 2px solid transparent;
+         transition: all 0.3s;
       }
 
-
+      .tab.active {
+         border-top: 2px solid var(--tg-theme-button-color);
+         background: #f5f5f5;
+      }
 
       .image-button {
-         width: 300px;
-         height: 300px;
+         width: 200px;
+         height: 200px;
          border: none;
          background-image: url('https://gas-kvas.com/grafic/uploads/posts/2024-01/gas-kvas-com-p-znachok-bitkoina-na-prozrachnom-fone-15.png');
          background-size: cover;
+         cursor: pointer;
+         transition: transform 0.2s;
       }
 
-    .content {
-            flex: 1; /* Занимает оставшееся пространство */
-            border: none; /*1px solid #ccc;*/
-            padding: 20px;
-            overflow: auto; /* Прокрутка, если содержимое превышает высоту */
-        }
-        .tabs {
-            display: flex;
-            cursor: pointer;
-            position: fixed; /* Закрепляем вкладки */
-            bottom: 0; /* Привязываем к низу */000
-            width: 100%; /* Ширина на всю страницу */
-            background: var(--tg-theme-bg-color); /* Фон для вкладок */
-        }
-        .tab {
-            padding: 10px 20px;
-            border: 1px solid blue;
+      .image-button:active {
+         transform: scale(0.95);
+      }
 
-            border-top: 2px solid blue;
-            background: #f1f1f1;
-            margin-right: 5px;
-        }
-        .tab.active {
-            background: white;
-            border-top: 3px solid aqua
-            ;
-        }
+      .button {
+         background: var(--tg-theme-button-color);
+         color: var(--tg-theme-button-text-color);
+         border: none;
+         padding: 10px 20px;
+         border-radius: 5px;
+         font-size: 16px;
+         cursor: pointer;
+         margin: 10px 0;
+      }
+
+      .energy-bar {
+         width: 100%;
+         height: 20px;
+         background: #ddd;
+         border-radius: 10px;
+         overflow: hidden;
+         margin: 10px 0;
+      }
+
+      .energy-fill {
+         height: 100%;
+         background: var(--tg-theme-button-color);
+         transition: width 0.3s;
+      }
+
+      #balance, #energy {
+         font-size: 24px;
+         font-weight: bold;
+         margin: 10px 0;
+      }
+
+      .boost-item {
+         display: flex;
+         justify-content: space-between;
+         padding: 10px;
+         border-bottom: 1px solid #eee;
+      }
    </style>
 </head>
 <body>
+   <div class="content" id="content1">
+      <h1 id="balance">0</h1>
+      <div id="energy">Energy: 100/100</div>
+      <div class="energy-bar"><div class="energy-fill" id="energy-fill" style="width: 100%"></div></div>
+      <button id="click" class="image-button"></button>
+   </div>
+   <div class="content" id="content2" style="display:none;">
+      <h2>Boosts</h2>
+      <div id="boosts">
+         <div class="boost-item">
+            <span>Click Power +1</span>
+            <button class="button" onclick="buyBoost('clickPower', 100)">Buy (100)</button>
+         </div>
+         <div class="boost-item">
+            <span>Auto Clicker</span>
+            <button class="button" onclick="buyBoost('autoClicker', 500)">Buy (500)</button>
+         </div>
+      </div>
+   </div>
+   <div class="content" id="content3" style="display:none;">
+      <h2>Friends</h2>
+      <p>Invite friends to earn bonuses!</p>
+      <button class="button" onclick="inviteFriend()">Invite Friend</button>
+   </div>
+   <div class="tabs">
+      <div class="tab active" onclick="showTab(1)">Click</div>
+      <div class="tab" onclick="showTab(2)">Boost</div>
+      <div class="tab" onclick="showTab(3)">Friends</div>
+   </div>
 
+   <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/9.19.1/firebase-app.js";
+      import { getDatabase, ref, set, get, child, onValue } from "https://www.gstatic.com/firebasejs/9.19.1/firebase-database.js";
 
-<div class="content" id="content1">
-    <button onclick="showAlert()">Нажми меня</button>
-    <button id="submit" class="button">submit1</button>
-    <h1 id="balance">0</h1>
-    <button id=click class="image-button"></button>
-</div>
-<div class="content" id="content2" style="display:none;">
-    <p>Содержимое второй вкладки.</p>
-</div>
+      const firebaseConfig = {
+         apiKey: "AIzaSyBhLISxR41ZYKyyffiY08c_YtqYQdu85pk",
+         authDomain: "test-b5ec3.firebaseapp.com",
+         databaseURL: "https://test-b5ec3-default-rtdb.firebaseio.com",
+         projectId: "test-b5ec3",
+         storageBucket: "test-b5ec3.appspot.com",
+         messagingSenderId: "489032935342",
+         appId: "1:489032935342:web:922e8c518ad0ff6b6eca3f",
+         measurementId: "G-YNQM9CV4P3"
+      };
 
+      const app = initializeApp(firebaseConfig);
+      const db = getDatabase(app);
+      const tg = window.Telegram.WebApp;
+      tg.expand();
 
-<div class="tabs">
-    <div class="tab active" onclick="showTab(1)">click</div>
-    <div class="tab" onclick="showTab(2)">boost</div>
-</div>
+      let balance = 0;
+      let energy = 100;
+      let maxEnergy = 100;
+      let clickPower = 1;
+      let autoClicker = 0;
 
+      // Load user data
+      const userId = tg.initDataUnsafe.user?.id;
+      if (!userId) {
+         alert("Error: Unable to get Telegram user ID");
+         return;
+      }
 
-
-<script>
-    function showTab(tabIndex) {
-        document.querySelectorAll('.content').forEach((content, index) => {
-            content.style.display = index === tabIndex - 1 ? 'block' : 'none';
-        });
-        document.querySelectorAll('.tab').forEach((tab, index) => {
-            tab.classList.toggle('active', index === tabIndex - 1);
-        });
-    }
-
-    function showAlert() {
-        alert('123');
-    }
-</script>
-<script src="https://www.gstatic.com/firebasejs/9.19.1/firebase-auth.js"></script>
-
-
-<script>
-   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js"; //////////////////////////////////////////////////////  captha  //////////////////////
-   import { initializeAppCheck, ReCaptchaV3Provider } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-app-check.js';
-
-   const app = initializeApp({
-     apiKey: "AIzaSyBhLISxR41ZYKyyffiY08c_YtqYQdu85pk",
-     authDomain: "test-b5ec3.firebaseapp.com",
-     databaseURL: "https://test-b5ec3-default-rtdb.firebaseio.com",
-     projectId: "test-b5ec3",
-     storageBucket: "test-b5ec3.appspot.com",
-     messagingSenderId: "489032935342",
-     appId: "1:489032935342:web:922e8c518ad0ff6b6eca3f",
-     measurementId: "G-YNQM9CV4P3"
-
-
-
-   });
-
-   // Pass your reCAPTCHA v3 site key (public key) to activate(). Make sure this
-   // key is the counterpart to the secret key you set in the Firebase console.
-   const appCheck = initializeAppCheck(app, {
-     provider: new ReCaptchaV3Provider('6LflVkoqAAAAACuPDCRiL3_dQOFeHwbZ8fvBzCEC'),
-
-     // Optional argument. If true, the SDK automatically refreshes App Check
-     // tokens as needed.
-     isTokenAutoRefreshEnabled: true
-   });
-
-
-</script>
-
-<script type="module">///////////////////////////////////////////////////////////////////////////////set f fgetdatabase
-      // Import the functions you need from the SDKs you need
-   import { initializeApp } from "https://www.gstatic.com/firebasejs/9.19.1/firebase-app.js";
-   import { getDatabase, ref, set, get, child, onValue } from "https://www.gstatic.com/firebasejs/9.19.1/firebase-database.js";
-   tg.MainButton.setText("Changed Text15")
-// Your web app's Firebase configuration
-   const firebaseConfig = {
-     apiKey: "AIzaSyBhLISxR41ZYKyyffiY08c_YtqYQdu85pk",
-     authDomain: "test-b5ec3.firebaseapp.com",
-     databaseURL: "https://test-b5ec3-default-rtdb.firebaseio.com",
-     projectId: "test-b5ec3",
-     storageBucket: "test-b5ec3.appspot.com",
-     messagingSenderId: "489032935342",
-     appId: "1:489032935342:web:922e8c518ad0ff6b6eca3f",
-     measurementId: "G-YNQM9CV4P3"
-   };
-// Initialize Firebase
-   const app = initializeApp(firebaseConfig);
-
-//get ref to database services
-  //  const db = getDatabase(app);
-
-   alert("1")
-
-   const dbRef = ref(getDatabase(app));
-
-   alert("database")
-   //const dbRef = ref(getDatabase(app));
-   get(child(dbRef, 'user/' + tg.initDataUnsafe.user.id + "/var1/var1")).then((snapshot) => {
-     if (snapshot.exists()) {
-       console.log(snapshot.val());
-       var vardata=snapshot.val();
-       window.globalvar11=snapshot.val();
-       alert(snapshot.val());
-       //alert("переменная сохранена"+globalvar11)
-     } else {
-       console.log("No data available");
-       alert("no")
-     }
-   }).catch((error) => {
-     console.error(error);
-   });
-   alert("2020")
-
-
-</script>
-
-<script type="module">
-   alert('qwerty')
-
-</script>
-
-
-<script type="module">
-   alert('script1');
-   alert('script123');
-   import { initializeApp } from "https://www.gstatic.com/firebasejs/9.19.1/firebase-app.js";
-   import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.19.1/firebase-auth.js";
-   alert('import')
-   const firebaseConfig = {
-     apiKey: "AIzaSyBhLISxR41ZYKyyffiY08c_YtqYQdu85pk",
-     authDomain: "test-b5ec3.firebaseapp.com",
-     databaseURL: "https://test-b5ec3-default-rtdb.firebaseio.com",
-     projectId: "test-b5ec3",
-     storageBucket: "test-b5ec3.appspot.com",
-     messagingSenderId: "489032935342",
-     appId: "1:489032935342:web:922e8c518ad0ff6b6eca3f",
-     measurementId: "G-YNQM9CV4P3"
-   };
-// Initialize Firebase
-   const queryString = window.location.search;
-   const urlParams = new URLSearchParams(queryString);
-   const id1=urlParams.get('id1')   // id1
-   const pass1=urlParams.get('pass1')    // M
-   //const urlParams.get('nothing') // empty string
-   alert(id1)
-   alert(pass1)
-   const id=tg.initDataUnsafe.user.id
-   if (id1 == id) alert("id=id1")
-
-   const app = initializeApp(firebaseConfig);
-
-   const auth = getAuth(app);
-   const email = tg.initDataUnsafe.user.id+'@example.com';
-
-   const password= pass1 ;
-
-   signInWithEmailAndPassword(auth, email, password)
-     .then((userCredential) => {
-       // Signed in
-
-       const user = userCredential.user;
-       // ...
-       alert("login")
-       //let a=fgetdata("var1")
-     })
-     .catch((error) => {
-       const errorCode = error.code;
-       const errorMessage = error.message;
-       alert("errorCode"+errorCode)
-     });
-       //const app = initializeApp(firebaseConfig);
-
-        //get ref to database services                                              getdatabase
-     //  const db = getDatabase(app);
-
-      alert("1")
-
-      const dbRef = ref(getDatabase(app));
-
-      alert("database")
-     // const dbRef = ref(getDatabase(app));
-      get(child(dbRef, 'user/' + tg.initDataUnsafe.user.id + "/var1")).then((snapshot) => {
-        if (snapshot.exists()) {
-          console.log(snapshot.val());
-          var vardata=snapshot.val();
-          window.globalvar11=snapshot.val();
-          alert(snapshot.val());
-          //alert("переменная сохранена"+globalvar11)
-        } else {
-          console.log("No data available");
-          alert("no")
-        }
-      }).catch((error) => {
-        console.error(error);
+      const userRef = ref(db, users/${userId});
+      onValue(userRef, (snapshot) => {
+         if (snapshot.exists()) {
+            const data = snapshot.val();
+            balance = data.balance || 0;
+            energy = data.energy || maxEnergy;
+            clickPower = data.clickPower || 1;
+            autoClicker = data.autoClicker || 0;
+            updateUI();
+         }
       });
-      alert("2020")
 
+      // Click handler
+      document.getElementById("click").addEventListener('click', () => {
+         if (energy >= 1) {
+            energy -= 1;
+            balance += clickPower;
+            saveData();
+            updateUI();
+         } else {
+            alert("Not enough energy!");
+         }
+      });
 
-</script>
+      // Energy regeneration
+      setInterval(() => {
+         if (energy < maxEnergy) {
+            energy = Math.min(energy + 1, maxEnergy);
+            updateUI();
+         }
+      }, 1000);
 
-<script type="module">
-      alert('script')
-      alert(window.location.href)
-      alert(document.URL)
+      // Auto clicker
+      setInterval(() => {
+         if (autoClicker > 0) {
+            balance += autoClicker;
+            saveData();
+            updateUI();
+         }
+      }, 1000);
 
+      // Save data to Firebase
+      function saveData() {
+         set(userRef, {
+            balance,
+            energy,
+            clickPower,
+            autoClicker
+         }).catch((error) => {
+            console.error("Error saving data:", error);
+         });
+      }
 
+      // Update UI
+      function updateUI() {
+         document.getElementById("balance").innerText = Math.floor(balance);
+         document.getElementById("energy").innerText = Energy: ${Math.floor(energy)}/${maxEnergy};
+         document.getElementById("energy-fill").style.width = ${(energy / maxEnergy) * 100}%;
+      }
 
+      // Buy boost
+      window.buyBoost = function(type, cost) {
+         if (balance >= cost) {
+            balance -= cost;
+            if (type === 'clickPower') {
+               clickPower += 1;
+            } else if (type === 'autoClicker') {
+               autoClicker += 1;
+            }
+            saveData();
+            updateUI();
+         } else {
+            alert("Not enough coins!");
+         }
+      };
 
+      // Invite friend
+      window.inviteFriend = function() {
+         const inviteLink = https://t.me/your_bot?start=${userId};
+         tg.openTelegramLink(https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=Join my game!);
+      };
 
-</script>
+      // Tab navigation
+      window.showTab = function(tabIndex) {
+
+document.querySelectorAll('.content').forEach((content, index) => {
+            content.style.display = index === tabIndex - 1 ? 'block' : 'none';
+         });
+         document.querySelectorAll('.tab').forEach((tab, index) => {
+            tab.classList.toggle('active', index === tabIndex - 1);
+         });
+      };
+   </script>
 </body>
-
-
-<script>
-   let tg = window.Telegram.WebApp; //получаем объект webapp телеграма
-
-   tg.expand(); //расширяем на все окно
-
-
-   let a=0
-
-
-   click.addEventListener('click', function(){ //вешаем событие на нажатие html-кнопки
-      a=a+1
-
-      document.getElementById("balance").innerHTML = a+globalvar11;
-      // alert(" "+ a )
-      //alert(a+globalvar11)
-   });
-
-
-
-
-   Telegram.WebApp.onEvent('mainButtonClicked', function(){
-      tg.sendData("some string that we need to send");
-      //при клике на основную кнопку отправляем данные в строковом виде
-   });
-
-
-   let usercard = document.getElementById("usercard"); //получаем блок usercard
-
-   let profName = document.createElement('p'); //создаем параграф
-   profName.innerText = `${tg.initDataUnsafe.user.first_name}
-   ${tg.initDataUnsafe.user.last_name}
-   ${tg.initDataUnsafe.user.username} (${tg.initDataUnsafe.user.language_code})`;
-   //выдем имя, "фамилию", через тире username и код языка
-   usercard.appendChild(profName); //добавляем
-
-   let userid = document.createElement('p'); //создаем еще параграф
-   userid.innerText = `${tg.initDataUnsafe.user.id}`; //показываем user_id
-   usercard.appendChild(userid); //добавляем
-
-
-   //работает только в attachment menu
-   // let pic = document.createElement('img'); //создаем img
-   // pic.src = tg.initDataUnsafe.user.photo_url; //задаём src
-   // usercard.appendChild(pic); //добавляем элемент в карточку
-</script>
-
-<script type="module">
-      // Import the functions you need from the SDKs you need
-   import { initializeApp } from "https://www.gstatic.com/firebasejs/9.19.1/firebase-app.js";
-   import { getDatabase, ref, set, get, child } from "https://www.gstatic.com/firebasejs/9.19.1/firebase-database.js";
-   tg.MainButton.setText("Changed Text10")
-// Your web app's Firebase configuration
-   const firebaseConfig = {
-     apiKey: "AIzaSyBhLISxR41ZYKyyffiY08c_YtqYQdu85pk",
-     authDomain: "test-b5ec3.firebaseapp.com",
-     databaseURL: "https://test-b5ec3-default-rtdb.firebaseio.com",
-     projectId: "test-b5ec3",
-     storageBucket: "test-b5ec3.appspot.com",
-     messagingSenderId: "489032935342",
-     appId: "1:489032935342:web:922e8c518ad0ff6b6eca3f",
-     measurementId: "G-YNQM9CV4P3"
-   };
-// Initialize Firebase
-   const app = initializeApp(firebaseConfig);
-
-//get ref to database services
-    const db = getDatabase(app);
-
-    document.getElementById("click").addEventListener('click', function(e){
-     e.preventDefault();
-     set(ref(db, 'user/' + tg.initDataUnsafe.user.id + '/var1'),
-     {
-
-
-       var1: a+globalvar11
-
-     });
-        //alert("Login Sucessfull  !"+ a );
-    })
-</script>
 </html>
-
-
