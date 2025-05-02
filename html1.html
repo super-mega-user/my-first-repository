@@ -4,13 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Clicker Game</title>
-    <link rel="icon" href="data:,"> <!-- Заглушка для favicon, устраняет ошибку 404 -->
+    <link rel="icon" href="data:,"> <!-- Заглушка для favicon -->
     <!-- Telegram Web App SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <!-- Firebase UMD SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.19.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.19.1/firebase-database.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.19.1/firebase-auth.js"></script>
+    <!-- Firebase SDK 8.10.1 (UMD, не модульный) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <style>
         :root {
             --tg-theme-bg-color: #ffffff;
@@ -173,44 +173,49 @@
             energy_limit: {
                 name: "Energy Limit",
                 levels: [100, 200, 300, 400, 500],
-                cost: level => level * 100,
-                apply: (level, state) => { state.maxEnergy = level; }
+                cost: function(level) { return level * 100; },
+                apply: function(level, state) { state.maxEnergy = level; }
             },
             multiply_per_click: {
                 name: "Click Power",
                 levels: [1, 2, 3, 4, 5],
-                cost: level => level * 100,
-                apply: (level, state) => { state.clickPower = level; }
+                cost: function(level) { return level * 100; },
+                apply: function(level, state) { state.clickPower = level; }
             },
             passive_card1: {
                 name: "Passive Card 1",
                 levels: [0, 1, 2, 3, 4],
-                cost: level => level * 500,
-                apply: (level, state) => { state.passiveIncome += level; }
+                cost: function(level) { return level * 500; },
+                apply: function(level, state) { state.passiveIncome += level; }
             },
-           passive_card2: {
+            passive_card2: {
                 name: "Passive Card 2",
                 levels: [0, 1, 2, 3, 4],
-                cost: level => level * 1000,
-                apply: (level, state) => { state.passiveIncome += level; }
+                cost: function(level) { return level * 1000; },
+                apply: function(level, state) { state.passiveIncome += level; }
             },
             recharge_energy: {
                 name: "Recharge Speed",
                 levels: [1, 2, 3, 4, 5],
-                cost: level => level * 200,
-                apply: (level, state) => { state.rechargeRate = level; }
+                cost: function(level) { return level * 200; },
+                apply: function(level, state) { state.rechargeRate = level; }
             }
         };
 
         // Инициализация Firebase
-        const app = firebase.initializeApp(firebaseConfig);
+        try {
+            firebase.initializeApp(firebaseConfig);
+            console.log([${new Date().toISOString()}] Firebase initialized);
+        } catch (error) {
+            console.error([${new Date().toISOString()}] Firebase initialization failed: ${error.message});
+        }
         const db = firebase.database();
         const auth = firebase.auth();
         const tg = window.Telegram.WebApp;
         tg.expand();
 
         // Глобальное состояние
-        let state = {
+        var state = {
             serverBalance: 0,
             localBalance: 0,
             serverEnergy: 100,
@@ -233,20 +238,20 @@
         // Функция отображения ошибок
         function showError(message) {
             console.error([${new Date().toISOString()}] Error: ${message});
-            const errorDiv = document.getElementById("error");
+            var errorDiv = document.getElementById("error");
             errorDiv.innerText = message;
             errorDiv.style.display = "block";
-            setTimeout(() => { errorDiv.style.display = "none"; }, 5000);
+            setTimeout(function() { errorDiv.style.display = "none"; }, 5000);
         }
 
         // Запуск приложения
-        async function startApp() {
+        function startApp() {
             console.log([${new Date().toISOString()}] Starting app...);
-            const urlParams = new URLSearchParams(window.location.search);
-            const pass1 = urlParams.get("pass1");
-            const id1 = urlParams.get("id1");
-            state.userId = tg.initDataUnsafe.user?.id;
-            console.log([${new Date().toISOString()}] URL params:, { pass1, id1, userId: state.userId });
+            var urlParams = new URLSearchParams(window.location.search);
+            var pass1 = urlParams.get("pass1");
+            var id1 = urlParams.get("id1");
+            state.userId = tg.initDataUnsafe.user ? tg.initDataUnsafe.user.id : null;
+            console.log([${new Date().toISOString()}] URL params:, { pass1: pass1, id1: id1, userId: state.userId });
 
             if (!state.userId || !pass1 || !id1 || state.userId.toString() !== id1) {
                 showError("Invalid user ID or parameters");
@@ -254,41 +259,42 @@
                 return;
             }
 
-            const email = ${state.userId}@example.com;
+            var email = state.userId + "@example.com";
             console.log([${new Date().toISOString()}] Authenticating with email: ${email});
-            try {
-                const userCredential = await auth.signInWithEmailAndPassword(email, pass1);
-                console.log([${new Date().toISOString()}] Authenticated, UID: ${userCredential.user.uid});
-                if (userCredential.user.uid !== state.userId.toString()) {
-                    showError("Authentication error: UID mismatch");
-                    tg.close();
-                    return;
-                }
-                initializeUserData();
-            } catch (error) {
-                showError(Authentication failed: ${error.message});
-            }
+            auth.signInWithEmailAndPassword(email, pass1)
+                .then(function(userCredential) {
+                    console.log([${new Date().toISOString()}] Authenticated, UID: ${userCredential.user.uid});
+                    if (userCredential.user.uid !== state.userId.toString()) {
+                        showError("Authentication error: UID mismatch");
+                        tg.close();
+                        return;
+                    }
+                    initializeUserData();
+                })
+                .catch(function(error) {
+                    showError("Authentication failed: " + error.message);
+                });
         }
 
         // Инициализация данных пользователя
         function initializeUserData() {
             console.log([${new Date().toISOString()}] Initializing user data for userId: ${state.userId});
-            const userRef = db.ref(users/${state.userId});
-            userRef.on("value", (snapshot) => {
+            var userRef = db.ref("users/" + state.userId);
+            userRef.on("value", function(snapshot) {
                 if (snapshot.exists()) {
-                    const data = snapshot.val();
+                    var data = snapshot.val();
                     state.serverBalance = data.balance || 0;
                     state.serverEnergy = data.energy || state.maxEnergy;
                     state.loginTimestamps = decompressTimestamps(data.login_timestamps || []);
                     state.clickBalanceHistory = decompressHistory(data.click_balance_history || []);
                     state.boosts = {
-                        energy_limit: data.boosts?.energy_limit || [],
-                        multiply_per_click: decompressTimestamps(data.boosts?.multiply_per_click || []),
+                        energy_limit: data.boosts && data.boosts.energy_limit ? data.boosts.energy_limit : [],
+                        multiply_per_click: decompressTimestamps(data.boosts && data.boosts.multiply_per_click ? data.boosts.multiply_per_click : []),
                         passive: {
-                            card1: decompressTimestamps(data.boosts?.passive?.card1 || []),
-                            card2: decompressTimestamps(data.boosts?.passive?.card2 || [])
+                            card1: decompressTimestamps(data.boosts && data.boosts.passive && data.boosts.passive.card1 ? data.boosts.passive.card1 : []),
+                            card2: decompressTimestamps(data.boosts && data.boosts.passive && data.boosts.passive.card2 ? data.boosts.passive.card2 : [])
                         },
-                        recharge_energy: decompressTimestamps(data.boosts?.recharge_energy || [])
+                        recharge_energy: decompressTimestamps(data.boosts && data.boosts.recharge_energy ? data.boosts.recharge_energy : [])
                     };
                     console.log([${new Date().toISOString()}] Loaded Firebase data:, data);
                     applyBoosts();
@@ -306,8 +312,8 @@
                     updateUI();
                     renderBoosts();
                 }
-            }, (error) => {
-                showError(Failed to load user data: ${error.message});
+            }, function(error) {
+                showError("Failed to load user data: " + error.message);
             });
         }
 
@@ -317,11 +323,21 @@
             state.clickPower = 1;
             state.rechargeRate = 1;
             state.passiveIncome = 0;
-            state.boosts.energy_limit.forEach(b => BOOST_CONFIG.energy_limit.apply(b.level, state));
-            state.boosts.multiply_per_click.forEach((_, i) => BOOST_CONFIG.multiply_per_click.apply(i + 1, state));
-            state.boosts.passive.card1.forEach((_, i) => BOOST_CONFIG.passive_card1.apply(i + 1, state));
-            state.boosts.passive.card2.forEach((_, i) => BOOST_CONFIG.passive_card2.apply(i + 1, state));
-            state.boosts.recharge_energy.forEach((_, i) => BOOST_CONFIG.recharge_energy.apply(i + 1, state));
+            state.boosts.energy_limit.forEach(function(b) {
+                BOOST_CONFIG.energy_limit.apply(b.level, state);
+            });
+            state.boosts.multiply_per_click.forEach(function(_, i) {
+                BOOST_CONFIG.multiply_per_click.apply(i + 1, state);
+            });
+            state.boosts.passive.card1.forEach(function(_, i) {
+                BOOST_CONFIG.passive_card1.apply(i + 1, state);
+            });
+            state.boosts.passive.card2.forEach(function(_, i) {
+                BOOST_CONFIG.passive_card2.apply(i + 1, state);
+            });
+            state.boosts.recharge_energy.forEach(function(_, i) {
+                BOOST_CONFIG.recharge_energy.apply(i + 1, state);
+            });
             console.log([${new Date().toISOString()}] Applied boosts:, {
                 maxEnergy: state.maxEnergy,
                 clickPower: state.clickPower,
@@ -333,16 +349,21 @@
         // Инициализация localStorage
         function initializeLocalStorage() {
             console.log([${new Date().toISOString()}] Initializing localStorage for userId: ${state.userId});
-            const storedData = localStorage.getItem(clicker_${state.userId});
-            if (storedData) {
-                const data = JSON.parse(storedData);
-                state.localBalance = data.localBalance || state.serverBalance;
-                state.localEnergy = data.localEnergy || state.serverEnergy;
-                console.log([${new Date().toISOString()}] Loaded localStorage:, data);
-            } else {
-                state.localBalance = state.serverBalance;
-                state.localEnergy = state.serverEnergy;
-                saveLocalStorage();
+            try {
+                var storedData = localStorage.getItem("clicker_" + state.userId);
+                if (storedData) {
+                    var data = JSON.parse(storedData);
+                    state.localBalance = data.localBalance || state.serverBalance;
+                    state.localEnergy = data.localEnergy || state.serverEnergy;
+                    console.log([${new Date().toISOString()}] Loaded localStorage:, data);
+                } else {
+                    state.localBalance = state.serverBalance;
+                    state.localEnergy = state.serverEnergy;
+                    saveLocalStorage();
+                }
+            } catch (error) {
+                console.error([${new Date().toISOString()}] localStorage access failed: ${error.message});
+                showError("Storage access blocked. Disable tracking prevention.");
             }
         }
 
@@ -352,17 +373,22 @@
                 localBalance: state.localBalance,
                 localEnergy: state.localEnergy
             });
-            localStorage.setItem(clicker_${state.userId}, JSON.stringify({
-                localBalance: state.localBalance,
-                localEnergy: state.localEnergy
-            }));
+            try {
+                localStorage.setItem("clicker_" + state.userId, JSON.stringify({
+                    localBalance: state.localBalance,
+                    localEnergy: state.localEnergy
+                }));
+            } catch (error) {
+                console.error([${new Date().toISOString()}] localStorage save failed: ${error.message});
+                showError("Storage access blocked. Disable tracking prevention.");
+            }
         }
 
         // Сжатие временных меток (дельта-кодирование)
         function compressTimestamps(timestamps) {
             if (!timestamps.length) return [];
-            const compressed = [timestamps[0] || 0];
-            for (let i = 1; i < timestamps.length; i++) {
+            var compressed = [timestamps[0] || 0];
+            for (var i = 1; i < timestamps.length; i++) {
                 compressed.push(timestamps[i] - timestamps[i - 1]);
             }
             return compressed;
@@ -371,8 +397,8 @@
         // Декомпрессия временных меток
         function decompressTimestamps(compressed) {
             if (!compressed.length) return [];
-            const timestamps = [compressed[0]];
-            for (let i = 1; i < compressed.length; i++) {
+            var timestamps = [compressed[0]];
+            for (var i = 1; i < compressed.length; i++) {
                 timestamps.push(timestamps[i - 1] + compressed[i]);
             }
             return timestamps;
@@ -381,8 +407,8 @@
         // Сжатие истории кликов
         function compressHistory(history) {
             if (!history.length) return [];
-            const compressed = [{ t: history[0].t, b: history[0].b }];
-            for (let i = 1; i < history.length; i++) {
+            var compressed = [{ t: history[0].t, b: history[0].b }];
+            for (var i = 1; i < history.length; i++) {
                 compressed.push({ t: history[i].t - history[i - 1].t, b: history[i].b });
             }
             return compressed;
@@ -391,8 +417,8 @@
         // Декомпрессия истории кликов
         function decompressHistory(compressed) {
             if (!compressed.length) return [];
-            const history = [{ t: compressed[0].t, b: compressed[0].b }];
-            for (let i = 1; i < compressed.length; i++) {
+            var history = [{ t: compressed[0].t, b: compressed[0].b }];
+            for (var i = 1; i < compressed.length; i++) {
                 history.push({ t: history[i - 1].t + compressed[i].t, b: compressed[i].b });
             }
             return history;
@@ -408,11 +434,11 @@
         // Пересчет пассивного дохода
         function recalculatePassiveIncome() {
             console.log([${new Date().toISOString()}] Recalculating passive income);
-            const now = Date.now();
-            let totalIncome = 0;
-            for (const cardId in state.boosts.passive) {
-                state.boosts.passive[cardId].forEach((timestamp, level) => {
-                    const elapsed = Math.min(now - timestamp, OFFLINE_LIMIT_HOURS * 60 * 60 * 1000);
+            var now = Date.now();
+            var totalIncome = 0;
+            for (var cardId in state.boosts.passive) {
+                state.boosts.passive[cardId].forEach(function(timestamp, level) {
+                    var elapsed = Math.min(now - timestamp, OFFLINE_LIMIT_HOURS * 60 * 60 * 1000);
                     totalIncome += (level + 1) * (elapsed / 1000);
                 });
             }
@@ -424,7 +450,7 @@
         }
 
         // Обработка клика
-        document.getElementById("click").addEventListener("click", () => {
+        document.getElementById("click").addEventListener("click", function() {
             console.log([${new Date().toISOString()}] Click button pressed, current energy: ${state.localEnergy});
             if (state.localEnergy >= 1) {
                 state.localEnergy -= 1;
@@ -445,7 +471,7 @@
         });
 
         // Регенерация энергии
-        setInterval(() => {
+        setInterval(function() {
             if (state.localEnergy < state.maxEnergy) {
                 state.localEnergy = Math.min(state.localEnergy + state.rechargeRate, state.maxEnergy);
                 console.log([${new Date().toISOString()}] Energy regenerated: ${state.localEnergy});
@@ -455,7 +481,8 @@
         }, 1000);
 
         // Начисление пассивного дохода
-        setInterval(() => {
+// Начисление пассивного дохода
+        setInterval(function() {
             if (state.passiveIncome > 0) {
                 state.localBalance += state.passiveIncome;
                 console.log([${new Date().toISOString()}] Passive income added: ${state.passiveIncome}, New balance: ${state.localBalance});
@@ -471,7 +498,7 @@
                 return;
             }
             console.log([${new Date().toISOString()}] Saving data to Firebase for userId: ${state.userId});
-            db.ref(users/${state.userId}).set({
+            db.ref("users/" + state.userId).set({
                 balance: state.serverBalance,
                 energy: state.serverEnergy,
                 boosts: {
@@ -485,7 +512,9 @@
                 },
                 login_timestamps: compressTimestamps(state.loginTimestamps),
                 click_balance_history: compressHistory(state.clickBalanceHistory)
-            }).catch(error => showError(Failed to save data: ${error.message}));
+            }).catch(function(error) {
+                showError("Failed to save data: " + error.message);
+            });
         }
 
         // Обновление интерфейса
@@ -496,39 +525,43 @@
                 maxEnergy: state.maxEnergy
             });
             document.getElementById("balance").innerText = Math.floor(state.localBalance);
-            document.getElementById("energy").innerText = Energy: ${Math.floor(state.localEnergy)}/${state.maxEnergy};
-            document.getElementById("energy-fill").style.width = ${(state.localEnergy / state.maxEnergy) * 100}%;
+            document.getElementById("energy").innerText = "Energy: " + Math.floor(state.localEnergy) + "/" + state.maxEnergy;
+            document.getElementById("energy-fill").style.width = (state.localEnergy / state.maxEnergy * 100) + "%";
         }
 
         // Рендеринг бустов
         function renderBoosts() {
             console.log([${new Date().toISOString()}] Rendering boosts...);
-            const boostsDiv = document.getElementById("boosts");
+            var boostsDiv = document.getElementById("boosts");
             boostsDiv.innerHTML = "";
-            Object.entries(BOOST_CONFIG).forEach(([key, config]) => {
-                const currentLevel = getCurrentBoostLevel(key);
-                const nextLevel = config.levels[currentLevel];
+            for (var key in BOOST_CONFIG) {
+                var config = BOOST_CONFIG[key];
+                var currentLevel = getCurrentBoostLevel(key);
+                var nextLevel = config.levels[currentLevel];
                 if (nextLevel !== undefined) {
-                    const cost = config.cost(nextLevel);
-                    const item = document.createElement("div");
+                    var cost = config.cost(nextLevel);
+                    var item = document.createElement("div");
                     item.className = "boost-item";
                     item.innerHTML = `
                         <span>${config.name} (Level ${currentLevel} → ${nextLevel})</span>
                         <button class="button boost-button" data-boost="${key}">Buy (${cost})</button>
                     `;
                     boostsDiv.appendChild(item);
-                    console.log([${new Date().toISOString()}] Rendered boost:, { key, currentLevel, nextLevel, cost });
+                    console.log([${new Date().toISOString()}] Rendered boost:, { key: key, currentLevel: currentLevel, nextLevel: nextLevel, cost: cost });
                 }
-            });
-            document.querySelectorAll(".boost-button").forEach(button => {
-                button.addEventListener("click", () => buyBoost(button.getAttribute("data-boost")));
+            }
+            var buttons = document.querySelectorAll(".boost-button");
+            buttons.forEach(function(button) {
+                button.addEventListener("click", function() {
+                    buyBoost(button.getAttribute("data-boost"));
+                });
             });
         }
 
         // Получение текущего уровня буста
         function getCurrentBoostLevel(key) {
-            if (key.startsWith("passive_")) {
-                const cardId = key.replace("passive_", "");
+            if (key.indexOf("passive_") === 0) {
+                var cardId = key.replace("passive_", "");
                 return state.boosts.passive[cardId].length;
             }
             return state.boosts[key.replace("_", "")].length;
@@ -537,21 +570,21 @@
         // Покупка буста
         function buyBoost(boostKey) {
             console.log([${new Date().toISOString()}] Buying boost: ${boostKey});
-            const config = BOOST_CONFIG[boostKey];
-            const currentLevel = getCurrentBoostLevel(boostKey);
-            const nextLevel = config.levels[currentLevel];
+            var config = BOOST_CONFIG[boostKey];
+            var currentLevel = getCurrentBoostLevel(boostKey);
+            var nextLevel = config.levels[currentLevel];
             if (nextLevel === undefined) {
                 showError("Max level reached!");
                 return;
             }
-            const cost = config.cost(nextLevel);
-            console.log([${new Date().toISOString()}] Boost details:, { boostKey, currentLevel, nextLevel, cost });
+            var cost = config.cost(nextLevel);
+            console.log([${new Date().toISOString()}] Boost details:, { boostKey: boostKey, currentLevel: currentLevel, nextLevel: nextLevel, cost: cost });
             if (state.localBalance >= cost) {
                 state.localBalance -= cost;
                 state.serverBalance = state.localBalance;
-                const timestamp = Date.now();
-                if (boostKey.startsWith("passive_")) {
-                    const cardId = boostKey.replace("passive_", "");
+                var timestamp = Date.now();
+                if (boostKey.indexOf("passive_") === 0) {
+                    var cardId = boostKey.replace("passive_", "");
                     state.boosts.passive[cardId].push(timestamp);
                 } else if (boostKey === "energy_limit") {
                     state.boosts.energy_limit.push({ level: nextLevel, t: timestamp });
@@ -563,7 +596,7 @@
                 saveLocalStorage();
                 updateUI();
                 renderBoosts();
-                console.log([${new Date().toISOString()}] Boost purchased:, { boostKey, nextLevel });
+                console.log([${new Date().toISOString()}] Boost purchased:, { boostKey: boostKey, nextLevel: nextLevel });
             } else {
                 showError("Not enough coins!");
             }
@@ -572,8 +605,8 @@
         // Приглашение друга
         function inviteFriend() {
             console.log([${new Date().toISOString()}] Generating invite link for userId: ${state.userId});
-            const inviteLink = https://t.me/your_bot?start=${state.userId};
-            const shareUrl = https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=Join%20my%20game!;
+            var inviteLink = "https://t.me/your_bot?start=" + state.userId;
+            var shareUrl = "https://t.me/share/url?url=" + encodeURIComponent(inviteLink) + "&text=Join%20my%20game!";
             console.log([${new Date().toISOString()}] Opening share URL: ${shareUrl});
             tg.openTelegramLink(shareUrl);
         }
@@ -581,18 +614,21 @@
         // Переключение вкладок
         function showTab(tabIndex) {
             console.log([${new Date().toISOString()}] Switching to tab: ${tabIndex});
-            document.querySelectorAll(".content").forEach((content, index) => {
+            var contents = document.querySelectorAll(".content");
+            contents.forEach(function(content, index) {
                 content.style.display = index === tabIndex - 1 ? "block" : "none";
             });
-            document.querySelectorAll(".tab").forEach((tab, index) => {
+            var tabs = document.querySelectorAll(".tab");
+            tabs.forEach(function(tab, index) {
                 tab.classList.toggle("active", index === tabIndex - 1);
             });
         }
 
         // Обработчики событий
-        document.querySelectorAll(".tab").forEach(tab => {
-            tab.addEventListener("click", () => {
-                const tabIndex = parseInt(tab.getAttribute("data-tab"));
+        var tabs = document.querySelectorAll(".tab");
+        tabs.forEach(function(tab) {
+            tab.addEventListener("click", function() {
+                var tabIndex = parseInt(tab.getAttribute("data-tab"));
                 console.log([${new Date().toISOString()}] Tab clicked: ${tabIndex});
                 showTab(tabIndex);
             });
