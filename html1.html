@@ -169,33 +169,8 @@
          measurementId: "G-YNQM9CV4P3"
       };
 
-      const app = initializeApp(firebaseConfig);
-      const db = getDatabase(app);
-      const auth = getAuth(app);
-      const tg = window.Telegram.WebApp;
-      tg.expand();
-
-      // Game state
-      let serverBalance = 0;
-      let localBalance = 0;
-      let serverEnergy = 100;
-      let localEnergy = 100;
-      let maxEnergy = 100;
-      let clickPower = 1;
-      let rechargeRate = 1;
-      let passiveIncome = 0;
-      let loginTimestamps = [];
-      let clickBalanceHistory = [];
-      let boosts = {
-         energy_limit: [],
-         multiply_per_click: [],
-         passive: { card1: [], card2: [] },
-         recharge_energy: []
-      };
-      let userId = null;
+      // Constants
       const OFFLINE_LIMIT_HOURS = 12;
-
-      // Boost configurations
       const BOOST_CONFIG = {
          energy_limit: {
             name: "Energy Limit",
@@ -229,6 +204,32 @@
          }
       };
 
+      // Initialize Firebase
+      const app = initializeApp(firebaseConfig);
+      const db = getDatabase(app);
+      const auth = getAuth(app);
+      const tg = window.Telegram.WebApp;
+      tg.expand();
+
+      // Game state
+      let serverBalance = 0;
+      let localBalance = 0;
+      let serverEnergy = 100;
+      let localEnergy = 100;
+      let maxEnergy = 100;
+      let clickPower = 1;
+      let rechargeRate = 1;
+      let passiveIncome = 0;
+      let loginTimestamps = [];
+      let clickBalanceHistory = [];
+      let boosts = {
+         energy_limit: [],
+         multiply_per_click: [],
+         passive: { card1: [], card2: [] },
+         recharge_energy: []
+      };
+      let userId = null;
+
       // Show error message
       function showError(message) {
          const errorDiv = document.getElementById("error");
@@ -239,49 +240,35 @@
 
       // Initialize application
       async function startApp() {
-         // Extract pass1 and id1 from URL
          const urlParams = new URLSearchParams(window.location.search);
          const pass1 = urlParams.get("pass1");
          const id1 = urlParams.get("id1");
-         console.log("URL:", window.location.search); // log
-         console.log("Extracted pass1:", pass1, "id1:", id1); // log
-
-         // Get Telegram user ID
          userId = tg.initDataUnsafe.user?.id;
-         console.log("User ID:", userId); // log
 
-         // Validate userId and id1
          if (!userId || !pass1 || !id1 || userId.toString() !== id1) {
-            console.log("Validation failed: userId, pass1, or id1 missing, or userId !== id1"); // log
-            showError("Error: Invalid user ID or parameters");
+            showError("Invalid user ID or parameters");
             tg.close();
             return;
          }
 
-         // Authenticate with Firebase
-         const email = userId + "@example.com";
-         console.log("Attempting to authenticate with email:", email); // log
+         const email = ${userId}@example.com;
          try {
             const userCredential = await signInWithEmailAndPassword(auth, email, pass1);
-            console.log("Authenticated user, UID:", userCredential.user.uid); // log
             if (userCredential.user.uid !== userId.toString()) {
-               console.error("UID mismatch:", userCredential.user.uid, "!=", userId); // log
                showError("Authentication error: UID mismatch");
                tg.close();
                return;
             }
             initializeUserData();
          } catch (error) {
-            console.error("Authentication error:", error.code, error.message); // log
-            showError("Authentication failed: " + error.message);
+            showError(Authentication failed: ${error.message});
             tg.close();
          }
       }
 
       // Initialize user data
       function initializeUserData() {
-         console.log("Initializing user data for userId:", userId); // log
-         const userRef = ref(db, "users/" + userId);
+         const userRef = ref(db, users/${userId});
          onValue(userRef, (snapshot) => {
             if (snapshot.exists()) {
                const data = snapshot.val();
@@ -299,14 +286,12 @@
                   recharge_energy: decompressTimestamps(data.boosts?.recharge_energy || [])
                };
                applyBoosts();
-               console.log("Loaded user data:", data); // log
                initializeLocalStorage();
                updateLoginTimestamps();
                recalculatePassiveIncome();
                updateUI();
                renderBoosts();
             } else {
-               console.log("No user data, initializing new"); // log
                serverEnergy = maxEnergy;
                loginTimestamps = [Date.now()];
                saveData();
@@ -315,8 +300,7 @@
                renderBoosts();
             }
          }, (error) => {
-            console.error("Firebase read error:", error.code, error.message); // log
-            showError("Failed to load user data: " + error.message);
+            showError(Failed to load user data: ${error.message});
          });
       }
 
@@ -331,18 +315,15 @@
          boosts.passive.card1.forEach((_, i) => BOOST_CONFIG.passive_card1.apply(i + 1, { passiveIncome }));
          boosts.passive.card2.forEach((_, i) => BOOST_CONFIG.passive_card2.apply(i + 1, { passiveIncome }));
          boosts.recharge_energy.forEach((_, i) => BOOST_CONFIG.recharge_energy.apply(i + 1, { rechargeRate }));
-         console.log("Applied boosts:", { maxEnergy, clickPower, rechargeRate, passiveIncome }); // log
       }
 
       // Initialize local storage
       function initializeLocalStorage() {
-         console.log("Initializing local storage"); // log
-         const storedData = localStorage.getItem(clicker123_${userId}
+         const storedData = localStorage.getItem(clicker123_${userId});
          if (storedData) {
             const data = JSON.parse(storedData);
             localBalance = data.localBalance || serverBalance;
             localEnergy = data.localEnergy || serverEnergy;
-            console.log("Loaded local storage:", data); // log
          } else {
             localBalance = serverBalance;
             localEnergy = serverEnergy;
@@ -352,7 +333,6 @@
 
       // Save to local storage
       function saveLocalStorage() {
-         console.log("Saving to local storage"); // log
          localStorage.setItem(clicker123_${userId}, JSON.stringify({
             localBalance,
             localEnergy
@@ -361,7 +341,7 @@
 
       // Compress timestamps (delta encoding)
       function compressTimestamps(timestamps) {
-         if (timestamps.length === 0) return [];
+         if (!timestamps.length) return [];
          const compressed = [timestamps[0] || 0];
          for (let i = 1; i < timestamps.length; i++) {
             compressed.push(timestamps[i] - timestamps[i - 1]);
@@ -371,7 +351,7 @@
 
       // Decompress timestamps
       function decompressTimestamps(compressed) {
-         if (compressed.length === 0) return [];
+         if (!compressed.length) return [];
          const timestamps = [compressed[0]];
          for (let i = 1; i < compressed.length; i++) {
             timestamps.push(timestamps[i - 1] + compressed[i]);
@@ -381,40 +361,32 @@
 
       // Compress history
       function compressHistory(history) {
-         if (history.length === 0) return [];
-         const compressed = history.length > 0 ? [{ t: history[0].t, b: history[0].b }] : [];
+         if (!history.length) return [];
+         const compressed = [{ t: history[0].t, b: history[0].b }];
          for (let i = 1; i < history.length; i++) {
-            compressed.push({
-               t: history[i].t - history[i - 1].t,
-               b: history[i].b
-            });
+            compressed.push({ t: history[i].t - history[i - 1].t, b: history[i].b });
          }
          return compressed;
       }
 
       // Decompress history
       function decompressHistory(compressed) {
-         if (compressed.length === 0) return [];
-         const history = compressed.length > 0 ? [{ t: compressed[0].t, b: compressed[0].b }] : [];
+         if (!compressed.length) return [];
+         const history = [{ t: compressed[0].t, b: compressed[0].b }];
          for (let i = 1; i < compressed.length; i++) {
-            history.push({
-               t: history[i - 1].t + compressed[i].t,
-               b: compressed[i].b
-            });
+            history.push({ t: history[i - 1].t + compressed[i].t, b: compressed[i].b });
          }
          return history;
       }
 
       // Update login timestamps
       function updateLoginTimestamps() {
-         console.log("Updating login timestamps"); // log
          loginTimestamps.push(Date.now());
          saveData();
       }
 
       // Recalculate passive income
       function recalculatePassiveIncome() {
-         console.log("Recalculating passive income"); // log
          const now = Date.now();
          let totalIncome = 0;
          for (const cardId in boosts.passive) {
@@ -427,24 +399,20 @@
          serverBalance = localBalance;
          saveData();
          saveLocalStorage();
-         console.log("Passive income added:", totalIncome, "New server balance:", serverBalance); // log
       }
 
       // Click handler
       document.getElementById("click").addEventListener("click", () => {
-         console.log("Click button pressed, local energy:", localEnergy); // log
          if (localEnergy >= 1) {
             localEnergy -= 1;
             localBalance += clickPower;
             serverEnergy = localEnergy;
             serverBalance = localBalance;
             clickBalanceHistory.push({ t: Date.now(), b: Math.floor(localBalance) });
-            console.log("New local balance:", localBalance, "New local energy:", localEnergy); // log
             saveData();
             saveLocalStorage();
             updateUI();
          } else {
-            console.log("Not enough energy"); // log
             showError("Not enough energy!");
          }
       });
@@ -453,7 +421,6 @@
       setInterval(() => {
          if (localEnergy < maxEnergy) {
             localEnergy = Math.min(localEnergy + rechargeRate, maxEnergy);
-            console.log("Local energy regenerated to:", localEnergy); // log
             saveLocalStorage();
             updateUI();
          }
@@ -463,7 +430,6 @@
       setInterval(() => {
          if (passiveIncome > 0) {
             localBalance += passiveIncome;
-            console.log("Local passive income added:", passiveIncome, "New local balance:", localBalance); // log
             saveLocalStorage();
             updateUI();
          }
@@ -471,12 +437,8 @@
 
       // Save data to Firebase
       function saveData() {
-         if (!userId) {
-            console.log("No userId, skipping save"); // log
-            return;
-         }
-         console.log("Saving data for userId:", userId); // log
-         set(ref(db, "users/" + userId), {
+         if (!userId) return;
+         set(ref(db, users/${userId}), {
             balance: serverBalance,
             energy: serverEnergy,
             boosts: {
@@ -490,18 +452,14 @@
             },
             login_timestamps: compressTimestamps(loginTimestamps),
             click_balance_history: compressHistory(clickBalanceHistory)
-         }).catch((error) => {
-            console.error("Error saving data:", error.code, error.message); // log
-            showError("Failed to save data: " + error.message);
-         });
+         }).catch(error => showError(Failed to save data: ${error.message}));
       }
 
       // Update UI
       function updateUI() {
-         console.log("Updating UI, local balance:", localBalance, "local energy:", localEnergy); // log
          document.getElementById("balance").innerText = Math.floor(localBalance);
          document.getElementById("energy").innerText = Energy: ${Math.floor(localEnergy)}/${maxEnergy};
-         document.getElementById("energy-fill").style.width = (localEnergy / maxEnergy) * 100 + "%";
+         document.getElementById("energy-fill").style.width = ${(localEnergy / maxEnergy) * 100}%;
       }
 
       // Render boosts
@@ -523,10 +481,7 @@
             }
          });
          document.querySelectorAll(".boost-button").forEach(button => {
-            button.addEventListener("click", () => {
-               const boostKey = button.getAttribute("data-boost");
-               buyBoost(boostKey);
-            });
+            button.addEventListener("click", () => buyBoost(button.getAttribute("data-boost")));
          });
       }
 
@@ -540,14 +495,11 @@
       }
 
       // Buy boost
-      // Buy boost
       function buyBoost(boostKey) {
-         console.log("Attempting to buy boost:", boostKey); // log
          const config = BOOST_CONFIG[boostKey];
          const currentLevel = getCurrentBoostLevel(boostKey);
          const nextLevel = config.levels[currentLevel];
          if (nextLevel === undefined) {
-            console.log("Max level reached for:", boostKey); // log
             showError("Max level reached!");
             return;
          }
@@ -569,25 +521,20 @@
             saveLocalStorage();
             updateUI();
             renderBoosts();
-            console.log("Bought boost:", boostKey, "Level:", nextLevel); // log
          } else {
-            console.log("Not enough coins for boost"); // log
             showError("Not enough coins!");
          }
       }
 
       // Invite friend
       function inviteFriend() {
-         console.log("Generating invite link for userId:", userId); // log
-         const inviteLink = "https://t.me/your_bot?start=" + userId;
-         const shareUrl = "https://t.me/share/url?url=" + encodeURIComponent(inviteLink) + "&text=Join%20my%20game!";
-         console.log("Opening Telegram share URL:", shareUrl); // log
+         const inviteLink = https://t.me/your_bot?start=${userId};
+         const shareUrl = https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=Join%20my%20game!;
          tg.openTelegramLink(shareUrl);
       }
 
       // Tab navigation
       function showTab(tabIndex) {
-         console.log("Switching to tab:", tabIndex); // log
          document.querySelectorAll(".content").forEach((content, index) => {
             content.style.display = index === tabIndex - 1 ? "block" : "none";
          });
@@ -597,19 +544,15 @@
       }
 
       // Bind tab events
-      document.querySelector>(".tab").forEach(tab => {
+      document.querySelectorAll(".tab").forEach(tab => {
          tab.addEventListener("click", () => {
             const tabIndex = parseInt(tab.getAttribute("data-tab"));
-            console.log("Tab clicked, index:", tabIndex); // log
             showTab(tabIndex);
          });
       });
 
       // Bind invite button
-      document.querySelector(".invite-friend").addEventListener("click", () => {
-         console.log("Invite friend button clicked"); // log
-         inviteFriend();
-      });
+      document.querySelector(".invite-friend").addEventListener("click", inviteFriend);
 
       // Start application
       startApp();
