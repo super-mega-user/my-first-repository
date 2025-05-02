@@ -238,7 +238,7 @@
       }
 
       // Initialize application
-      async function initializeApp() {
+      async function startApp() {
          // Extract pass1 and id1 from URL
          const urlParams = new URLSearchParams(window.location.search);
          const pass1 = urlParams.get("pass1");
@@ -382,7 +382,7 @@
       // Compress history
       function compressHistory(history) {
          if (history.length === 0) return [];
-         const compressed = [{ t: history[0].t, b: history[0].b }];
+         const compressed = history.length > 0 ? [{ t: history[0].t, b: history[0].b }] : [];
          for (let i = 1; i < history.length; i++) {
             compressed.push({
                t: history[i].t - history[i - 1].t,
@@ -395,7 +395,7 @@
       // Decompress history
       function decompressHistory(compressed) {
          if (compressed.length === 0) return [];
-         const history = [{ t: compressed[0].t, b: compressed[0].b }];
+         const history = compressed.length > 0 ? [{ t: compressed[0].t, b: compressed[0].b }] : [];
          for (let i = 1; i < compressed.length; i++) {
             history.push({
                t: history[i - 1].t + compressed[i].t,
@@ -597,7 +597,7 @@
       }
 
       // Bind tab events
-      document.querySelectorAll(".tab").forEach(tab => {
+      document.querySelector>.tab").forEach(tab => {
          tab.addEventListener("click", () => {
             const tabIndex = parseInt(tab.getAttribute("data-tab"));
             console.log("Tab clicked, index:", tabIndex); // log
@@ -612,7 +612,7 @@
       });
 
       // Start application
-      initializeApp();
+      startApp();
    </script>
 </body>
 </html>
