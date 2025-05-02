@@ -4,7 +4,11 @@
    <meta charset="UTF-8">
    <meta name="viewport" content="width=device-width, initial-scale=1.0">
    <title>clicker123</title>
+   <link rel="icon" href="data:,">
    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+   <script src="https://www.gstatic.com/firebasejs/9.19.1/firebase-app.js"></script>
+   <script src="https://www.gstatic.com/firebasejs/9.19.1/firebase-database.js"></script>
+   <script src="https://www.gstatic.com/firebasejs/9.19.1/firebase-auth.js"></script>
    <style>
       :root {
          --tg-theme-bg-color: #ffffff;
@@ -137,10 +141,9 @@
       <div class="tab" data-tab="3">Friends</div>
    </div>
 
-   <script type="module">
-      import { initializeApp } from "https://www.gstatic.com/firebasejs/9.19.1/firebase-app.js";
-      import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/9.19.1/firebase-database.js";
-      import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.19.1/firebase-auth.js";
+   <script>
+      console.log([${new Date().toISOString()}] Running script from: ${window.location.pathname});
+      console.log([${new Date().toISOString()}] Expected file: clicker123.html);
 
       const firebaseConfig = {
          apiKey: "AIzaSyBhLISxR41ZYKyyffiY08c_YtqYQdu85pk",
@@ -154,42 +157,17 @@
       };
 
       const OFFLINE_LIMIT_HOURS = 12;
-      ;const BOOST_CONFIG = {
-         energy_limit: {
-            name: "Energy Limit",
-            levels: [100, 200, 300, 400, 500],
-            cost: level => level * 100,
-            apply: (level, state) => { state.maxEnergy = level; }
-         },
-         multiply_per_click: {
-            name: "Click Power",
-            levels: [1, 2, 3, 4, 5],
-            cost: level => level * 100,
-            apply: (level, state) => { state.clickPower = level; }
-         },
-         passive_card1: {
-            name: "Passive Card 1",
-            levels: [0, 1, 2, 3, 4],
-            cost: level => level * 500,
-            apply: (level, state) => { state.passiveIncome += level; }
-         },
-         passive_card2: {
-            name: "Passive Card 2",
-            levels: [0, 1, 2, 3, 4],
-            cost: level => level * 1000,
-            apply: (level, state) => { state.passiveIncome += level; }
-         },
-         recharge_energy: {
-            name: "Recharge Speed",
-            levels: [1, 2, 3, 4, 5],
-            cost: level => level * 200,
-            apply: (level, state) => { state.rechargeRate = level; }
-         }
+      const BOOST_CONFIG = {
+         energy_limit: { name: "Energy Limit", levels: [100, 200, 300, 400, 500], cost: level => level * 100, apply: (level, state) => { state.maxEnergy = level; } },
+         multiply_per_click: { name: "Click Power", levels: [1, 2, 3, 4, 5], cost: level => level * 100, apply: (level, state) => { state.clickPower = level; } },
+         passive_card1: { name: "Passive Card 1", levels: [0, 1, 2, 3, 4], cost: level => level * 500, apply: (level, state) => { state.passiveIncome += level; } },
+         passive_card2: { name: "Passive Card 2", levels: [0, 1, 2, 3, 4], cost: level => level * 1000, apply: (level, state) => { state.passiveIncome += level; } },
+         recharge_energy: { name: "Recharge Speed", levels: [1, 2, 3, 4, 5], cost: level => level * 200, apply: (level, state) => { state.rechargeRate = level; } }
       };
 
-      const app = initializeApp(firebaseConfig);
-      const db = getDatabase(app);
-      const auth = getAuth(app);
+      const app = firebase.initializeApp(firebaseConfig);
+      const db = firebase.database();
+      const auth = firebase.auth();
       const tg = window.Telegram.WebApp;
       tg.expand();
 
@@ -212,6 +190,7 @@
       let userId = null;
 
       function showError(message) {
+         console.error([${new Date().toISOString()}] Error: ${message});
          const errorDiv = document.getElementById("error");
          errorDiv.innerText = message;
          errorDiv.style.display = "block";
@@ -219,10 +198,12 @@
       }
 
       async function startApp() {
+         console.log([${new Date().toISOString()}] Starting app...);
          const urlParams = new URLSearchParams(window.location.search);
          const pass1 = urlParams.get("pass1");
          const id1 = urlParams.get("id1");
          userId = tg.initDataUnsafe.user?.id;
+         console.log([${new Date().toISOString()}] URL params:, { pass1, id1, userId });
 
          if (!userId || !pass1 || !id1 || userId.toString() !== id1) {
             showError("Invalid user ID or parameters");
@@ -231,8 +212,10 @@
          }
 
          const email = ${userId}@example.com;
+         console.log([${new Date().toISOString()}] Authenticating with email: ${email});
          try {
-            const userCredential = await signInWithEmailAndPassword(auth, email, pass1);
+            const userCredential = await auth.signInWithEmailAndPassword(email, pass1);
+            console.log([${new Date().toISOString()}] Authenticated, UID: ${userCredential.user.uid});
             if (userCredential.user.uid !== userId.toString()) {
                showError("Authentication error: UID mismatch");
                tg.close();
@@ -241,13 +224,13 @@
             initializeUserData();
          } catch (error) {
             showError(Authentication failed: ${error.message});
-            tg.close();
          }
       }
 
       function initializeUserData() {
-         const userRef = ref(db, users/${userId});
-         onValue(userRef, (snapshot) => {
+         console.log([${new Date().toISOString()}] Initializing user data for userId: ${userId});
+         const userRef = db.ref(users/${userId});
+         userRef.on("value", (snapshot) => {
             if (snapshot.exists()) {
                const data = snapshot.val();
                serverBalance = data.balance || 0;
@@ -263,6 +246,7 @@
                   },
                   recharge_energy: decompressTimestamps(data.boosts?.recharge_energy || [])
                };
+               console.log([${new Date().toISOString()}] Loaded Firebase data:, data);
                applyBoosts();
                initializeLocalStorage();
                updateLoginTimestamps();
@@ -270,6 +254,7 @@
                updateUI();
                renderBoosts();
             } else {
+               console.log([${new Date().toISOString()}] No user data, initializing new user);
                serverEnergy = maxEnergy;
                loginTimestamps = [Date.now()];
                saveData();
@@ -292,14 +277,17 @@
          boosts.passive.card1.forEach((_, i) => BOOST_CONFIG.passive_card1.apply(i + 1, { passiveIncome }));
          boosts.passive.card2.forEach((_, i) => BOOST_CONFIG.passive_card2.apply(i + 1, { passiveIncome }));
          boosts.recharge_energy.forEach((_, i) => BOOST_CONFIG.recharge_energy.apply(i + 1, { rechargeRate }));
+         console.log([${new Date().toISOString()}] Applied boosts:, { maxEnergy, clickPower, rechargeRate, passiveIncome });
       }
 
       function initializeLocalStorage() {
+         console.log([${new Date().toISOString()}] Initializing localStorage for userId: ${userId});
          const storedData = localStorage.getItem(clicker123_${userId});
          if (storedData) {
             const data = JSON.parse(storedData);
             localBalance = data.localBalance || serverBalance;
             localEnergy = data.localEnergy || serverEnergy;
+            console.log([${new Date().toISOString()}] Loaded localStorage:, data);
          } else {
             localBalance = serverBalance;
             localEnergy = serverEnergy;
@@ -308,6 +296,7 @@
       }
 
       function saveLocalStorage() {
+         console.log([${new Date().toISOString()}] Saving to localStorage:, { localBalance, localEnergy });
          localStorage.setItem(clicker123_${userId}, JSON.stringify({
             localBalance,
             localEnergy
@@ -351,11 +340,13 @@
       }
 
       function updateLoginTimestamps() {
+         console.log([${new Date().toISOString()}] Updating login timestamps);
          loginTimestamps.push(Date.now());
          saveData();
       }
 
       function recalculatePassiveIncome() {
+         console.log([${new Date().toISOString()}] Recalculating passive income);
          const now = Date.now();
          let totalIncome = 0;
          for (const cardId in boosts.passive) {
@@ -366,17 +357,20 @@
          }
          localBalance += totalIncome;
          serverBalance = localBalance;
+         console.log([${new Date().toISOString()}] Passive income added: ${totalIncome}, New balance: ${localBalance});
          saveData();
          saveLocalStorage();
       }
 
       document.getElementById("click").addEventListener("click", () => {
+         console.log([${new Date().toISOString()}] Click button pressed, current energy: ${localEnergy});
          if (localEnergy >= 1) {
             localEnergy -= 1;
             localBalance += clickPower;
             serverEnergy = localEnergy;
             serverBalance = localBalance;
             clickBalanceHistory.push({ t: Date.now(), b: Math.floor(localBalance) });
+            console.log([${new Date().toISOString()}] Click processed:, { localBalance, localEnergy });
             saveData();
             saveLocalStorage();
             updateUI();
@@ -388,6 +382,7 @@
       setInterval(() => {
          if (localEnergy < maxEnergy) {
             localEnergy = Math.min(localEnergy + rechargeRate, maxEnergy);
+            console.log([${new Date().toISOString()}] Energy regenerated: ${localEnergy});
             saveLocalStorage();
             updateUI();
          }
@@ -396,14 +391,19 @@
       setInterval(() => {
          if (passiveIncome > 0) {
             localBalance += passiveIncome;
+            console.log([${new Date().toISOString()}] Passive income added: ${passiveIncome}, New balance: ${localBalance});
             saveLocalStorage();
             updateUI();
          }
       }, 1000);
 
       function saveData() {
-         if (!userId) return;
-         set(ref(db, users/${userId}), {
+         if (!userId) {
+            console.log([${new Date().toISOString()}] No userId, skipping saveData);
+            return;
+         }
+         console.log([${new Date().toISOString()}] Saving data to Firebase for userId: ${userId});
+         db.ref(users/${userId}).set({
             balance: serverBalance,
             energy: serverEnergy,
             boosts: {
@@ -421,12 +421,14 @@
       }
 
       function updateUI() {
+         console.log([${new Date().toISOString()}] Updating UI:, { localBalance, localEnergy, maxEnergy });
          document.getElementById("balance").innerText = Math.floor(localBalance);
          document.getElementById("energy").innerText = Energy: ${Math.floor(localEnergy)}/${maxEnergy};
          document.getElementById("energy-fill").style.width = ${(localEnergy / maxEnergy) * 100}%;
       }
 
       function renderBoosts() {
+         console.log([${new Date().toISOString()}] Rendering boosts...);
          const boostsDiv = document.getElementById("boosts");
          boostsDiv.innerHTML = "";
          Object.entries(BOOST_CONFIG).forEach(([key, config]) => {
@@ -441,6 +443,7 @@
                   <button class="button boost-button" data-boost="${key}">Buy (${cost})</button>
                `;
                boostsDiv.appendChild(item);
+               console.log([${new Date().toISOString()}] Rendered boost:, { key, currentLevel, nextLevel, cost });
             }
          });
          document.querySelectorAll(".boost-button").forEach(button => {
@@ -457,6 +460,7 @@
       }
 
       function buyBoost(boostKey) {
+         console.log([${new Date().toISOString()}] Buying boost: ${boostKey});
          const config = BOOST_CONFIG[boostKey];
          const currentLevel = getCurrentBoostLevel(boostKey);
          const nextLevel = config.levels[currentLevel];
@@ -465,6 +469,7 @@
             return;
          }
          const cost = config.cost(nextLevel);
+         console.log([${new Date().toISOString()}] Boost details:, { boostKey, currentLevel, nextLevel, cost });
          if (localBalance >= cost) {
             localBalance -= cost;
             serverBalance = localBalance;
@@ -482,18 +487,23 @@
             saveLocalStorage();
             updateUI();
             renderBoosts();
+            console.log([${new Date().toISOString()}] Boost purchased:, { boostKey, nextLevel });
          } else {
             showError("Not enough coins!");
          }
       }
 
-      function inviteFriend() {
+
+function inviteFriend() {
+         console.log([${new Date().toISOString()}] Generating invite link for userId: ${userId});
          const inviteLink = https://t.me/your_bot?start=${userId};
          const shareUrl = https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=Join%20my%20game!;
+         console.log([${new Date().toISOString()}] Opening share URL: ${shareUrl});
          tg.openTelegramLink(shareUrl);
       }
 
       function showTab(tabIndex) {
+         console.log([${new Date().toISOString()}] Switching to tab: ${tabIndex});
          document.querySelectorAll(".content").forEach((content, index) => {
             content.style.display = index === tabIndex - 1 ? "block" : "none";
          });
@@ -505,12 +515,14 @@
       document.querySelectorAll(".tab").forEach(tab => {
          tab.addEventListener("click", () => {
             const tabIndex = parseInt(tab.getAttribute("data-tab"));
+            console.log([${new Date().toISOString()}] Tab clicked: ${tabIndex});
             showTab(tabIndex);
          });
       });
 
       document.querySelector(".invite-friend").addEventListener("click", inviteFriend);
 
+      console.log([${new Date().toISOString()}] Starting application...);
       startApp();
    </script>
 </body>
