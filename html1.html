@@ -337,7 +337,7 @@
       // Initialize local storage
       function initializeLocalStorage() {
          console.log("Initializing local storage"); // log
-         const storedData = localStorage.getItem(clicker123_${userId});
+         const storedData = localStorage.getItem(clicker123_${userId}
          if (storedData) {
             const data = JSON.parse(storedData);
             localBalance = data.localBalance || serverBalance;
@@ -597,7 +597,7 @@
       }
 
       // Bind tab events
-      document.querySelector>.tab").forEach(tab => {
+      document.querySelector>(".tab").forEach(tab => {
          tab.addEventListener("click", () => {
             const tabIndex = parseInt(tab.getAttribute("data-tab"));
             console.log("Tab clicked, index:", tabIndex); // log
