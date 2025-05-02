@@ -121,6 +121,12 @@
       .boost-item .button {
          margin: 0;
       }
+
+      .error-message {
+         color: red;
+         font-size: 16px;
+         margin: 10px 0;
+      }
    </style>
 </head>
 <body>
@@ -129,6 +135,7 @@
       <div id="energy">Energy: 100/100</div>
       <div class="energy-bar"><div class="energy-fill" id="energy-fill" style="width: 100%"></div></div>
       <button id="click" class="image-button"></button>
+      <div id="error" class="error-message" style="display: none;"></div>
    </div>
    <div class="content" id="content2" style="display:none;">
       <h2>Boosts</h2>
@@ -175,8 +182,8 @@
       let localEnergy = 100;
       let maxEnergy = 100;
       let clickPower = 1;
-      let rechargeRate = 1; // Energy per second
-      let passiveIncome = 0; // Total passive income per second
+      let rechargeRate = 1;
+      let passiveIncome = 0;
       let loginTimestamps = [];
       let clickBalanceHistory = [];
       let boosts = {
@@ -193,7 +200,7 @@
          energy_limit: {
             name: "Energy Limit",
             levels: [100, 200, 300, 400, 500],
-            cost: level => level * 100, // 100, 200, 300, ...
+            cost: level => level * 100,
             apply: (level, state) => { state.maxEnergy = level; }
          },
          multiply_per_click: {
@@ -222,44 +229,54 @@
          }
       };
 
-      // Extract pass1 and id1 from URL
-      const urlParams = new URLSearchParams(window.location.search);
-      const pass1 = urlParams.get("pass1");
-      const id1 = urlParams.get("id1");
-      console.log("URL:", window.location.search); // log
-      console.log("Extracted pass1:", pass1, "id1:", id1); // log
-
-      // Get Telegram user ID
-      userId = tg.initDataUnsafe.user?.id;
-      console.log("User ID:", userId); // log
-
-      // Validate userId and id1
-      if (!userId || !pass1 || !id1 || userId.toString() !== id1) {
-         console.log("Validation failed: userId, pass1, or id1 missing, or userId !== id1"); // log
-         alert("Error: Invalid user ID or parameters");
-         tg.close();
-         return;
+      // Show error message
+      function showError(message) {
+         const errorDiv = document.getElementById("error");
+         errorDiv.innerText = message;
+         errorDiv.style.display = "block";
+         setTimeout(() => { errorDiv.style.display = "none"; }, 5000);
       }
 
-      // Authenticate with Firebase
-      const email = userId + "@example.com";
-      console.log("Attempting to authenticate with email:", email); // log
-      signInWithEmailAndPassword(auth, email, pass1)
-         .then((userCredential) => {
+      // Initialize application
+      async function initializeApp() {
+         // Extract pass1 and id1 from URL
+         const urlParams = new URLSearchParams(window.location.search);
+         const pass1 = urlParams.get("pass1");
+         const id1 = urlParams.get("id1");
+         console.log("URL:", window.location.search); // log
+         console.log("Extracted pass1:", pass1, "id1:", id1); // log
+
+         // Get Telegram user ID
+         userId = tg.initDataUnsafe.user?.id;
+         console.log("User ID:", userId); // log
+
+         // Validate userId and id1
+         if (!userId || !pass1 || !id1 || userId.toString() !== id1) {
+            console.log("Validation failed: userId, pass1, or id1 missing, or userId !== id1"); // log
+            showError("Error: Invalid user ID or parameters");
+            tg.close();
+            return;
+         }
+
+         // Authenticate with Firebase
+         const email = userId + "@example.com";
+         console.log("Attempting to authenticate with email:", email); // log
+         try {
+            const userCredential = await signInWithEmailAndPassword(auth, email, pass1);
             console.log("Authenticated user, UID:", userCredential.user.uid); // log
             if (userCredential.user.uid !== userId.toString()) {
                console.error("UID mismatch:", userCredential.user.uid, "!=", userId); // log
-               alert("Authentication error: UID mismatch");
+               showError("Authentication error: UID mismatch");
                tg.close();
                return;
             }
             initializeUserData();
-         })
-         .catch((error) => {
+         } catch (error) {
             console.error("Authentication error:", error.code, error.message); // log
-            alert("Authentication failed: " + error.message);
+            showError("Authentication failed: " + error.message);
             tg.close();
-         });
+         }
+      }
 
       // Initialize user data
       function initializeUserData() {
@@ -299,7 +316,7 @@
             }
          }, (error) => {
             console.error("Firebase read error:", error.code, error.message); // log
-            alert("Failed to load user data: " + error.message);
+            showError("Failed to load user data: " + error.message);
          });
       }
 
@@ -428,7 +445,7 @@
             updateUI();
          } else {
             console.log("Not enough energy"); // log
-            alert("Not enough energy!");
+            showError("Not enough energy!");
          }
       });
 
@@ -475,6 +492,7 @@
             click_balance_history: compressHistory(clickBalanceHistory)
          }).catch((error) => {
             console.error("Error saving data:", error.code, error.message); // log
+            showError("Failed to save data: " + error.message);
          });
       }
 
@@ -522,6 +540,7 @@
       }
 
       // Buy boost
+      // Buy boost
       function buyBoost(boostKey) {
          console.log("Attempting to buy boost:", boostKey); // log
          const config = BOOST_CONFIG[boostKey];
@@ -529,7 +548,7 @@
          const nextLevel = config.levels[currentLevel];
          if (nextLevel === undefined) {
             console.log("Max level reached for:", boostKey); // log
-            alert("Max level reached!");
+            showError("Max level reached!");
             return;
          }
          const cost = config.cost(nextLevel);
@@ -551,9 +570,9 @@
             updateUI();
             renderBoosts();
             console.log("Bought boost:", boostKey, "Level:", nextLevel); // log
-            } else {
+         } else {
             console.log("Not enough coins for boost"); // log
-            alert("Not enough coins!");
+            showError("Not enough coins!");
          }
       }
 
@@ -591,6 +610,9 @@
          console.log("Invite friend button clicked"); // log
          inviteFriend();
       });
+
+      // Start application
+      initializeApp();
    </script>
 </body>
 </html>
