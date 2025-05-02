@@ -3,7 +3,7 @@
 <head>
    <meta charset="UTF-8">
    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   <title>test</title>
+   <title>clicker123</title>
    <script src="https://telegram.org/js/telegram-web-app.js"></script>
    <style>
       :root {
@@ -167,6 +167,7 @@
       const auth = getAuth(app);
       const tg = window.Telegram.WebApp;
       tg.expand();
+      console.log("Telegram Web App initialized"); // log
 
       let balance = 0;
       let energy = 100;
@@ -178,31 +179,34 @@
       // Extract pass1 from URL
       const urlParams = new URLSearchParams(window.location.search);
       const pass1 = urlParams.get("pass1");
+      console.log("Extracted pass1:", pass1); // log
 
       // Get Telegram user ID
       userId = tg.initDataUnsafe.user?.id;
+      console.log("User ID:", userId); // log
       if (!userId || !pass1) {
+         console.log("Missing userId or pass1"); // log
          alert("Error: Unable to get Telegram user ID or password");
          tg.close();
-         return;
+      } else {
+         // Authenticate with Firebase
+         const email = userId + "@example.com";
+         console.log("Attempting to authenticate with email:", email); // log
+         signInWithEmailAndPassword(auth, email, pass1)
+            .then((userCredential) => {
+               console.log("Authenticated user:", userCredential.user.uid); // log
+               initializeUserData();
+            })
+            .catch((error) => {
+               console.error("Authentication error:", error); // log
+               alert("Authentication failed: " + error.message);
+               tg.close();
+            });
       }
-
-      // Authenticate with Firebase
-      const email = userId + "@example.com";
-      signInWithEmailAndPassword(auth, email, pass1)
-         .then((userCredential) => {
-            // Successful login
-            console.log("Authenticated:", userCredential.user.uid);
-            initializeUserData();
-         })
-         .catch((error) => {
-            console.error("Authentication error:", error);
-            alert("Authentication failed: " + error.message);
-            tg.close();
-         });
 
       // Initialize user data after authentication
       function initializeUserData() {
+         console.log("Initializing user data for userId:", userId); // log
          const userRef = ref(db, "users/" + userId);
          onValue(userRef, (snapshot) => {
             if (snapshot.exists()) {
@@ -211,26 +215,30 @@
                energy = data.energy || maxEnergy;
                clickPower = data.clickPower || 1;
                autoClicker = data.autoClicker || 0;
+               console.log("Loaded user data:", data); // log
                updateUI();
             } else {
-               // Initialize new user
+               console.log("No user data found, initializing new data"); // log
                saveData();
                updateUI();
             }
          }, (error) => {
-            console.error("Firebase error:", error);
+            console.error("Firebase error:", error); // log
             alert("Failed to load user data: " + error.message);
          });
       }
 
       // Click handler
       document.getElementById("click").addEventListener("click", () => {
+         console.log("Click button pressed, current energy:", energy); // log
          if (energy >= 1) {
             energy -= 1;
             balance += clickPower;
+            console.log("New balance:", balance, "New energy:", energy); // log
             saveData();
             updateUI();
          } else {
+            console.log("Not enough energy"); // log
             alert("Not enough energy!");
          }
       });
@@ -239,6 +247,7 @@
       setInterval(() => {
          if (energy < maxEnergy) {
             energy = Math.min(energy + 1, maxEnergy);
+            console.log("Energy regenerated to:", energy); // log
             updateUI();
          }
       }, 1000);
@@ -247,6 +256,7 @@
       setInterval(() => {
          if (autoClicker > 0) {
             balance += autoClicker;
+            console.log("Auto clicker added:", autoClicker, "New balance:", balance); // log
             saveData();
             updateUI();
          }
@@ -254,19 +264,24 @@
 
       // Save data to Firebase
       function saveData() {
-         if (!userId) return;
+         if (!userId) {
+            console.log("No userId, skipping save"); // log
+            return;
+         }
+         console.log("Saving data for userId:", userId); // log
          set(ref(db, "users/" + userId), {
             balance,
             energy,
             clickPower,
             autoClicker
          }).catch((error) => {
-            console.error("Error saving data:", error);
+            console.error("Error saving data:", error); // log
          });
       }
 
       // Update UI
       function updateUI() {
+         console.log("Updating UI, balance:", balance, "energy:", energy); // log
          document.getElementById("balance").innerText = Math.floor(balance);
          document.getElementById("energy").innerText = "Energy: " + Math.floor(energy) + "/" + maxEnergy;
          document.getElementById("energy-fill").style.width = (energy / maxEnergy) * 100 + "%";
@@ -274,29 +289,36 @@
 
       // Buy boost
       function buyBoost(type, cost) {
+         console.log("Attempting to buy boost:", type, "Cost:", cost); // log
          if (balance >= cost) {
             balance -= cost;
             if (type === "clickPower") {
                clickPower += 1;
+               console.log("Increased clickPower to:", clickPower); // log
             } else if (type === "autoClicker") {
                autoClicker += 1;
+               console.log("Increased autoClicker to:", autoClicker); // log
             }
             saveData();
             updateUI();
          } else {
+            console.log("Not enough coins for boost"); // log
             alert("Not enough coins!");
          }
       }
 
       // Invite friend
       function inviteFriend() {
+         console.log("Generating invite link for userId:", userId); // log
          const inviteLink = "https://t.me/your_bot?start=" + userId;
          const shareUrl = "https://t.me/share/url?url=" + encodeURIComponent(inviteLink) + "&text=Join%20my%20game!";
+         console.log("Opening Telegram share URL:", shareUrl); // log
          tg.openTelegramLink(shareUrl);
       }
 
       // Tab navigation
       function showTab(tabIndex) {
+         console.log("Switching to tab:", tabIndex); // log
          document.querySelectorAll(".content").forEach((content, index) => {
             content.style.display = index === tabIndex - 1 ? "block" : "none";
          });
@@ -309,16 +331,26 @@
       document.querySelectorAll(".tab").forEach(tab => {
          tab.addEventListener("click", () => {
             const tabIndex = parseInt(tab.getAttribute("data-tab"));
+            console.log("Tab clicked, index:", tabIndex); // log
             showTab(tabIndex);
          });
       });
 
       // Bind boost buttons
-      document.querySelector(".boost-click-power").addEventListener("click", () => buyBoost("clickPower", 100));
-      document.querySelector(".boost-auto-clicker").addEventListener("click", () => buyBoost("autoClicker", 500));
+      document.querySelector(".boost-click-power").addEventListener("click", () => {
+         console.log("Boost click power button clicked"); // log
+         buyBoost("clickPower", 100);
+      });
+      document.querySelector(".boost-auto-clicker").addEventListener("click", () => {
+         console.log("Boost auto clicker button clicked"); // log
+         buyBoost("autoClicker", 500);
+      });
 
       // Bind invite button
-      document.querySelector(".invite-friend").addEventListener("click", inviteFriend);
+      document.querySelector(".invite-friend").addEventListener("click", () => {
+         console.log("Invite friend button clicked"); // log
+         inviteFriend();
+      });
    </script>
 </body>
 </html>
