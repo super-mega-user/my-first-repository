@@ -143,7 +143,10 @@
 
    <script>
       console.log([${new Date().toISOString()}] Running script from: ${window.location.pathname});
-      console.log([${new Date().toISOString()}] Expected file: clicker123.html);
+      console.log([${new Date().toISOString()}] Expected file: html1.html);
+      if (!window.location.pathname.includes("html1.html")) {
+         console.warn([${new Date().toISOString()}] Warning: This script is designed for html1.html, but running from ${window.location.pathname});
+      }
 
       const firebaseConfig = {
          apiKey: "AIzaSyBhLISxR41ZYKyyffiY08c_YtqYQdu85pk",
@@ -492,9 +495,7 @@
             showError("Not enough coins!");
          }
       }
-
-
-function inviteFriend() {
+     function inviteFriend() {
          console.log([${new Date().toISOString()}] Generating invite link for userId: ${userId});
          const inviteLink = https://t.me/your_bot?start=${userId};
          const shareUrl = https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=Join%20my%20game!;
