@@ -164,11 +164,9 @@
     </div>
 
     <script type="module">
-        import { getAuth, setPersistence, inMemoryPersistence } from "https://www.gstatic.com/firebasejs/9.19.1/firebase-auth.js";
-setPersistence(auth, inMemoryPersistence);
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.19.1/firebase-app.js";
-        import { getDatabase, ref, set, onValue, push } from "https://www.gstatic.com/firebasejs/9.19.1/firebase-database.js";
-        import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.19.1/firebase-auth.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+        import { getDatabase, ref, set, onValue, push } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
+        import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBhLISxR41ZYKyyffiY08c_YtqYQdu85pk",
@@ -188,7 +186,7 @@ setPersistence(auth, inMemoryPersistence);
         tg.expand();
 
         let userId = tg.initDataUnsafe.user && tg.initDataUnsafe.user.id ? tg.initDataUnsafe.user.id : null;
-        let balance = parseInt(sessionStorage.getItem("balance_" + userId)) || 0;
+        let balance = 0; // Теперь только из Firebase
         let serverBalance = 0;
         let energy = 100;
         let maxEnergy = 100;
@@ -248,6 +246,7 @@ setPersistence(auth, inMemoryPersistence);
                 if (snapshot.exists()) {
                     var data = snapshot.val();
                     serverBalance = data.server_balance || 0;
+                    balance = serverBalance; // Синхронизация с сервером
                     energy = data.energy || maxEnergy;
                     maxEnergy = data.max_energy || 100;
                     rechargeRate = data.recharge_rate || 1;
@@ -256,8 +255,7 @@ setPersistence(auth, inMemoryPersistence);
                     passiveIncome.card2 = data.boosts && data.boosts.passive_income && data.boosts.passive_income.card2 ? data.boosts.passive_income.card2.level || 0 : 0;
                     passiveIncome.card3 = data.boosts && data.boosts.passive_income && data.boosts.passive_income.card3 ? data.boosts.passive_income.card3.level || 0 : 0;
                     lastServerSync = data.last_server_sync || Date.now();
-                    balance = parseInt(sessionStorage.getItem("balance_" + userId)) || serverBalance;
-                    console.log("Initialized balance: " + balance + ", energy: " + energy); // Отладка
+                    console.log("Firebase sync: balance=" + balance + ", energy=" + energy); // Отладка
                     updateUI();
                     syncServerBalance();
                 } else {
@@ -279,7 +277,6 @@ setPersistence(auth, inMemoryPersistence);
                 energy -= 1;
                 balance += clickPower;
                 serverBalance += clickPower;
-                sessionStorage.setItem("balance_" + userId, balance);
                 console.log("Click: balance=" + balance + ", energy=" + energy); // Отладка
                 push(ref(db, "users/" + userId + "/click_balance_history"), {
                     delta_t: lastClickTime ? now - lastClickTime : 0,
@@ -299,6 +296,7 @@ setPersistence(auth, inMemoryPersistence);
             if (energy < maxEnergy) {
                 energy = Math.min(energy + rechargeRate / 10, maxEnergy);
                 console.log("Regen: energy=" + energy); // Отладка
+                saveData();
                 updateUI();
             }
         }, 100);
@@ -308,8 +306,9 @@ setPersistence(auth, inMemoryPersistence);
             var totalPassive = passiveIncome.card1 + passiveIncome.card2 + passiveIncome.card3;
             if (totalPassive > 0) {
                 balance += totalPassive / 10;
-                sessionStorage.setItem("balance_" + userId, balance);
+                serverBalance += totalPassive / 10;
                 console.log("Passive: balance=" + balance); // Отладка
+                saveData();
                 updateUI();
             }
         }, 100);
@@ -337,6 +336,8 @@ setPersistence(auth, inMemoryPersistence);
                         tg.close();
                     }
                     serverBalance = calculatedBalance;
+                    balance = serverBalance;
+                    console.log("Server sync: balance=" + balance); // Отладка
                     saveData();
                 }
             }, { onlyOnce: true });
@@ -391,7 +392,7 @@ setPersistence(auth, inMemoryPersistence);
             console.log("Buy attempt: balance=" + balance + ", cost=" + cost); // Отладка
             if (balance >= cost) {
                 balance -= cost;
-                sessionStorage.setItem("balance_" + userId, balance);
+                serverBalance -= cost;
                 updateFn();
                 var now = Date.now();
                 push(ref(db, "users/" + userId + "/boosts/" + path + "/purchases"), {
