@@ -187,8 +187,9 @@
         tg.expand();
 
         let userId = tg.initDataUnsafe.user && tg.initDataUnsafe.user.id ? tg.initDataUnsafe.user.id : null;
-        let balance = 0;
-        let serverBalance = 0;
+        let balance = 0; // Локальный баланс для UI
+        let serverBalance = 0; // Счетчик кликов
+        let clickCounter = 0; // Локальный счетчик кликов для записи в историю
         let energy = 100;
         let maxEnergy = 100;
         let rechargeRate = 1;
@@ -197,11 +198,11 @@
         let lastClickTime = 0;
         let lastEnergyUpdate = 0;
         let firstClickTime = 0;
-        let clickBuffer = [];
         const MIN_CLICK_INTERVAL = 100;
         const ENERGY_UPDATE_INTERVAL = 1000;
         const MAX_CLICKS_PER_SECOND = 10;
-        const BUFFER_FLUSH_INTERVAL = 1000;
+        const CLICK_SAVE_THRESHOLD = 100; // Сохранять каждые 100 кликов
+        const PASSIVE_INCOME_MAX_HOURS = 4; // Ограничение пассивного дохода (4 часа)
 
         // Извлечение pass1
         const urlParams = new URLSearchParams(window.location.search);
@@ -258,7 +259,8 @@
                 if (snapshot.exists()) {
                     var data = snapshot.val();
                     serverBalance = data.server_balance || 0;
-                    balance = serverBalance;
+                    clickCounter = serverBalance;
+                    balance = serverBalance; // Начальный локальный баланс
                     energy = Math.floor(data.energy || maxEnergy);
                     maxEnergy = Math.floor(data.max_energy || 100);
                     rechargeRate = data.recharge_rate || 1;
@@ -268,9 +270,9 @@
                     passiveIncome.card3 = data.boosts && data.boosts.passive_income && data.boosts.passive_income.card3 ? Object.keys(data.boosts.passive_income.card3).length : 0;
                     if (data.click_balance_history) {
                         var firstKey = Object.keys(data.click_balance_history)[0];
-                        firstClickTime = data.click_balance_history[firstKey].t || 0;
+                        firstClickTime = parseInt(firstKey) || 0;
                     }
-                    console.log("Firebase init: balance=" + balance + ", energy=" + energy + ", clickPower=" + clickPower + ", firstClickTime=" + firstClickTime);
+                    console.log("Firebase init: serverBalance=" + serverBalance + ", energy=" + energy + ", clickPower=" + clickPower + ", firstClickTime=" + firstClickTime);
                     updateUI();
                 } else {
                     console.log("No user data, initializing new data");
@@ -288,11 +290,9 @@
                 return;
             }
             var secondAgo = now - 1000;
-            var recentClicks = clickBuffer.filter(function(click) {
-                return click.t > secondAgo;
-            });
-            if (recentClicks.length >= MAX_CLICKS_PER_SECOND) {
-                console.error("Too many clicks: " + recentClicks.length);
+            var recentClicks = clickCounter - (clickCounter % CLICK_SAVE_THRESHOLD);
+            if (recentClicks / CLICK_SAVE_THRESHOLD >= MAX_CLICKS_PER_SECOND) {
+                console.error("Too many clicks: " + recentClicks);
                 alert("Too many clicks. Please slow down.");
                 return;
             }
@@ -300,47 +300,36 @@
             lastClickTime = now;
             if (energy >= 1) {
                 energy -= 1;
-                balance += clickPower;
+                clickCounter += clickPower;
                 serverBalance += clickPower;
-                clickBuffer.push({ t: now, b: clickPower });
-                console.log("Click buffered: balance=" + balance + ", energy=" + energy + ", bufferSize=" + clickBuffer.length);
+                balance += clickPower; // Обновляем локальный баланс
+                console.log("Click: clickCounter=" + clickCounter + ", serverBalance=" + serverBalance + ", balance=" + balance);
+                if (clickCounter % CLICK_SAVE_THRESHOLD === 0) {
+                    saveClickHistory(now);
+                }
                 updateUI();
+                saveData();
             } else {
                 console.log("Not enough energy: " + energy);
                 alert("Not enough energy!");
             }
         });
 
-        // Отправка кэшированных кликов
-        setInterval(function() {
-            if (clickBuffer.length === 0) return;
-            var clicksToSave = clickBuffer.splice(0, clickBuffer.length);
-            console.log("Flushing clicks: count=" + clicksToSave.length);
-            var updates = {};
-            clicksToSave.forEach(function(click) {
-                if (!click.t || !click.b || click.b <= 0) {
-                    console.error("Invalid click data: ", click);
-                    return;
-                }
-                var key = click.t;
-                var data = firstClickTime === 0 ? { t: click.t, b: click.b } : { delta_t: click.t - firstClickTime, b: click.b };
-                if (firstClickTime === 0) firstClickTime = click.t;
-                updates["click_balance_history/" + key] = data;
-            });
-            if (Object.keys(updates).length === 0) {
-                console.log("No valid clicks to save");
+        // Сохранение истории кликов
+        function saveClickHistory(timestamp) {
+            if (!timestamp || !Number.isInteger(timestamp) || !Number.isInteger(clickCounter) || clickCounter < 0) {
+                console.error("Invalid click history data: t=" + timestamp + ", clickCounter=" + clickCounter);
                 return;
             }
-            update(ref(db, "users/" + userId), updates)
+            set(ref(db, "users/" + userId + "/click_balance_history/" + timestamp), clickCounter)
                 .then(function() {
-                    console.log("Clicks saved: count=" + Object.keys(updates).length);
-                    saveData();
+                    console.log("Click history saved: t=" + timestamp + ", clickCounter=" + clickCounter);
                 })
                 .catch(function(error) {
-                    console.error("Error saving clicks: ", error.message);
-                    alert("Failed to save clicks: " + error.message);
+                    console.error("Error saving click history: ", error.message);
+                    alert("Failed to save click history: " + error.message);
                 });
-        }, BUFFER_FLUSH_INTERVAL);
+        }
 
         // Регенерация энергии
         setInterval(function() {
@@ -359,10 +348,9 @@
         setInterval(function() {
             var totalPassive = passiveIncome.card1 + passiveIncome.card2 + passiveIncome.card3;
             if (totalPassive > 0) {
-                balance += totalPassive;
-                serverBalance += totalPassive;
+                balance += totalPassive; // Обновляем только локальный баланс
                 console.log("Passive income: balance=" + balance + ", totalPassive=" + totalPassive);
-                saveData();
+                updateUI();
             }
         }, 1000);
 
@@ -386,12 +374,12 @@
                         }
                     }
                 };
-                if (!data.server_balance || !data.energy || !data.max_energy) {
+                if (!Number.isInteger(data.server_balance) || data.server_balance < 0 || !Number.isInteger(data.energy) || !Number.isInteger(data.max_energy)) {
                     console.error("Invalid save data: ", data);
                     return;
                 }
-                await set(ref(db, "users/" + userId), data);
-                console.log("Data saved: balance=" + serverBalance + ", energy=" + energy);
+                await update(ref(db, "users/" + userId), data);
+                console.log("Data saved: serverBalance=" + serverBalance + ", energy=" + energy);
             } catch (error) {
                 console.error("Error saving data: ", error.message);
                 alert("Failed to save data: " + error.message);
@@ -414,6 +402,97 @@
                 levels[i] = i === 1 ? firstTime : firstTime + (3600000 * i);
             }
             return levels;
+        }
+
+        // Расчет реального баланса
+        async function calculateRealBalance() {
+            try {
+                const userRef = ref(db, "users/" + userId);
+                const snapshot = await new Promise((resolve) => onValue(userRef, resolve, { onlyOnce: true }));
+                if (!snapshot.exists()) {
+                    console.error("No user data for balance calculation");
+                    return 0;
+                }
+                const data = snapshot.val();
+
+                // 1. Счетчик кликов
+                let clickBalance = 0;
+                if (data.click_balance_history) {
+                    const lastKey = Object.keys(data.click_balance_history).sort().pop();
+                    clickBalance = data.click_balance_history[lastKey] || 0;
+                }
+
+                // 2. Пассивный доход
+                let passiveIncomeRate = (passiveIncome.card1 + passiveIncome.card2 + passiveIncome.card3);
+                let seconds = 0;
+                if (data.login_history) {
+                    const lastLogin = Object.keys(data.login_history).sort().pop();
+                    if (lastLogin) {
+                        const loginTime = parseInt(lastLogin);
+                        const now = Date.now();
+                        seconds = Math.min((now - loginTime) / 1000, PASSIVE_INCOME_MAX_HOURS * 3600);
+                    }
+                }
+                const passiveIncomeTotal = passiveIncomeRate * seconds;
+
+                // 3. Затраты на покупки
+                let totalSpent = 0;
+                if (data.boosts) {
+                    if (data.boosts.multiply_per_click) {
+                        const levels = Object.keys(data.boosts.multiply_per_click).length;
+                        for (let i = 1; i <= levels; i++) {
+                            totalSpent += Math.floor(100 * i * i);
+                        }
+                    }
+                    if (data.boosts.energy_limit) {
+                        const levels = Object.keys(data.boosts.energy_limit).length;
+                        for (let i = 1; i <= levels; i++) {
+                            totalSpent += Math.floor(200 * i * i);
+                        }
+                    }
+                    if (data.boosts.recharge_energy) {
+                        const levels = Object.keys(data.boosts.recharge_energy).length;
+                        for (let i = 1; i <= levels; i++) {
+                            totalSpent += Math.floor(150 * i * i);
+                        }
+                    }
+                    if (data.boosts.passive_income) {
+                        if (data.boosts.passive_income.card1) {
+                            const levels = Object.keys(data.boosts.passive_income.card1).length;
+                            for (let i = 1; i <= levels; i++) {
+                                totalSpent += Math.floor(300 * i * i);
+                            }
+                        }
+                        if (data.boosts.passive_income.card2) {
+                            const levels = Object.keys(data.boosts.passive_income.card2).length;
+                            for (let i = 1; i <= levels; i++) {
+                                totalSpent += Math.floor(500 * i * i);
+                            }
+                        }
+                        if (data.boosts.passive_income.card3) {
+                            const levels = Object.keys(data.boosts.passive_income.card3).length;
+                            for (let i = 1; i <= levels; i++) {
+                                totalSpent += Math.floor(1000 * i * i);
+                            }
+                        }
+                    }
+                }
+
+                const realBalance = clickBalance + passiveIncomeTotal - totalSpent;
+                console.log("Real balance calculated: clicks=" + clickBalance + ", passive=" + passiveIncomeTotal + ", spent=" + totalSpent + ", realBalance=" + realBalance);
+                return realBalance;
+            } catch (error) {
+                console.error("Error calculating real balance: ", error.message);
+                return 0;
+            }
+        }
+
+        // Функция синхронизации (не используется)
+        async function syncBalance() {
+            const realBalance = await calculateRealBalance();
+            balance = realBalance;
+            console.log("Balance synced: balance=" + balance);
+            updateUI();
         }
 
         // Обновление UI
@@ -443,10 +522,8 @@
                 onValue(ref(db, "users/" + userId + "/click_balance_history"), function(snapshot) {
                     var calculatedBalance = 0;
                     if (snapshot.exists()) {
-                        var history = snapshot.val();
-                        Object.values(history).forEach(function(entry) {
-                            calculatedBalance += entry.b;
-                        });
+                        const lastKey = Object.keys(snapshot.val()).sort().pop();
+                        calculatedBalance = snapshot.val()[lastKey] || 0;
                     }
                     if (calculatedBalance < cost) {
                         console.error("Invalid balance: client=" + balance + ", server=" + calculatedBalance);
@@ -454,7 +531,6 @@
                         return;
                     }
                     balance -= cost;
-                    serverBalance -= cost;
                     updateFn();
                     var now = Date.now();
                     var level = getNextLevel(path);
@@ -463,6 +539,7 @@
                     set(ref(db, "users/" + userId + "/boosts/" + path + "/" + level), timeValue)
                         .then(function() {
                             console.log("Boost purchased: type=" + type + ", level=" + level + ", cost=" + cost + ", time=" + timeValue);
+                            saveClickHistory(now); // Сохраняем историю кликов при покупке
                             saveData().then(function() {
                                 updateUI();
                             });
@@ -525,6 +602,12 @@
                 console.error("Error generating invite link: ", error.message);
                 alert("Failed to generate invite link. Please try again.");
             }
+        });
+
+        // Сохранение кликов при выходе
+        tg.onEvent('mainButtonClicked', function() {
+            saveClickHistory(Date.now());
+            tg.close();
         });
 
         // Навигация по вкладкам
