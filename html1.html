@@ -165,7 +165,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
-        import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
+        import { getDatabase, ref, set, update, onValue } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
         import { getAuth, signInWithEmailAndPassword, setPersistence, inMemoryPersistence } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 
         const firebaseConfig = {
@@ -182,7 +182,7 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
         const auth = getAuth(app);
-        setPersistence(auth, inMemoryPersistence); // Отключаем локальное кэширование аутентификации
+        setPersistence(auth, inMemoryPersistence);
         const tg = window.Telegram.WebApp;
         tg.expand();
 
@@ -195,15 +195,13 @@
         let clickPower = 1;
         let passiveIncome = { card1: 0, card2: 0, card3: 0 };
         let lastClickTime = 0;
-        let lastLoginTime = 0;
         let lastEnergyUpdate = 0;
-        let firstClickTime = 0; // Для дельта-кодирования
-        let clickBuffer = []; // Кэширование кликов
-        const MIN_CLICK_INTERVAL = 100; // Ограничение кликов
-        const ENERGY_UPDATE_INTERVAL = 1000; // Регенерация раз в секунду
-        const MAX_LOGINS_PER_HOUR = 10; // Ограничение входов
-        const MAX_CLICKS_PER_SECOND = 10; // Ограничение кликов
-        const BUFFER_FLUSH_INTERVAL = 1000; // Отправка кликов раз в 1 сек
+        let firstClickTime = 0;
+        let clickBuffer = [];
+        const MIN_CLICK_INTERVAL = 100;
+        const ENERGY_UPDATE_INTERVAL = 1000;
+        const MAX_CLICKS_PER_SECOND = 10;
+        const BUFFER_FLUSH_INTERVAL = 1000;
 
         // Извлечение pass1
         const urlParams = new URLSearchParams(window.location.search);
@@ -221,11 +219,10 @@
 
         // Выполнение инициализации
         if (initializeAppLogic()) {
-            // Аутентификация
             const email = userId + "@example.com";
             signInWithEmailAndPassword(auth, email, pass1)
                 .then(function(userCredential) {
-                    console.log("Auth successful for user: " + userId); // Отладка
+                    console.log("Auth successful for user: " + userId);
                     initializeUserData();
                     logLogin();
                 })
@@ -239,30 +236,19 @@
         // Логирование входа
         function logLogin() {
             var now = Date.now();
-            // Проверка частоты входов
-            onValue(ref(db, "users/" + userId + "/login_history"), function(snapshot) {
-                if (snapshot.exists()) {
-                    var logins = snapshot.val();
-                    var hourAgo = now - 3600000;
-                    var recentLogins = Object.keys(logins).filter(function(t) {
-                        return parseInt(t) > hourAgo;
-                    });
-                    if (recentLogins.length >= MAX_LOGINS_PER_HOUR) {
-                        console.error("Too many logins: " + recentLogins.length);
-                        alert("Too many logins. Please try again later.");
-                        tg.close();
-                        return;
-                    }
-                }
-                // Запись входа
-                set(ref(db, "users/" + userId + "/login_history/" + now), 1)
-                    .then(function() {
-                        console.log("Login recorded: t=" + now); // Отладка
-                    })
-                    .catch(function(error) {
-                        console.error("Error logging login: ", error);
-                    });
-            }, { onlyOnce: true });
+            const loginData = 1;
+            if (typeof loginData !== 'number' || loginData !== 1) {
+                console.error("Invalid login data: ", loginData);
+                return;
+            }
+            set(ref(db, "users/" + userId + "/login_history/" + now), loginData)
+                .then(function() {
+                    console.log("Login recorded: t=" + now);
+                })
+                .catch(function(error) {
+                    console.error("Error logging login: ", error.message);
+                    alert("Failed to record login: " + error.message);
+                });
         }
 
         // Инициализация данных
@@ -273,22 +259,21 @@
                     var data = snapshot.val();
                     serverBalance = data.server_balance || 0;
                     balance = serverBalance;
-                    energy = Math.floor(data.energy || maxEnergy); // Целое число
-                    maxEnergy = Math.floor(data.max_energy || 100); // Целое число
+                    energy = Math.floor(data.energy || maxEnergy);
+                    maxEnergy = Math.floor(data.max_energy || 100);
                     rechargeRate = data.recharge_rate || 1;
                     clickPower = data.boosts && data.boosts.multiply_per_click ? Math.max(1, Object.keys(data.boosts.multiply_per_click).length) : 1;
                     passiveIncome.card1 = data.boosts && data.boosts.passive_income && data.boosts.passive_income.card1 ? Object.keys(data.boosts.passive_income.card1).length : 0;
                     passiveIncome.card2 = data.boosts && data.boosts.passive_income && data.boosts.passive_income.card2 ? Object.keys(data.boosts.passive_income.card2).length : 0;
                     passiveIncome.card3 = data.boosts && data.boosts.passive_income && data.boosts.passive_income.card3 ? Object.keys(data.boosts.passive_income.card3).length : 0;
-                    // Получение firstClickTime
                     if (data.click_balance_history) {
                         var firstKey = Object.keys(data.click_balance_history)[0];
                         firstClickTime = data.click_balance_history[firstKey].t || 0;
                     }
-                    console.log("Firebase init: balance=" + balance + ", energy=" + energy + ", clickPower=" + clickPower + ", firstClickTime=" + firstClickTime); // Отладка
+                    console.log("Firebase init: balance=" + balance + ", energy=" + energy + ", clickPower=" + clickPower + ", firstClickTime=" + firstClickTime);
                     updateUI();
                 } else {
-                    console.log("No user data, initializing new data"); // Отладка
+                    console.log("No user data, initializing new data");
                     saveData();
                     updateUI();
                 }
@@ -299,10 +284,9 @@
         document.getElementById("click").addEventListener("click", function() {
             var now = Date.now();
             if (now - lastClickTime < MIN_CLICK_INTERVAL) {
-                console.log("Click blocked: too frequent"); // Отладка
+                console.log("Click blocked: too frequent");
                 return;
             }
-            // Проверка частоты кликов
             var secondAgo = now - 1000;
             var recentClicks = clickBuffer.filter(function(click) {
                 return click.t > secondAgo;
@@ -319,10 +303,10 @@
                 balance += clickPower;
                 serverBalance += clickPower;
                 clickBuffer.push({ t: now, b: clickPower });
-                console.log("Click buffered: balance=" + balance + ", energy=" + energy + ", bufferSize=" + clickBuffer.length); // Отладка
+                console.log("Click buffered: balance=" + balance + ", energy=" + energy + ", bufferSize=" + clickBuffer.length);
                 updateUI();
             } else {
-                console.log("Not enough energy: " + energy); // Отладка
+                console.log("Not enough energy: " + energy);
                 alert("Not enough energy!");
             }
         });
@@ -331,22 +315,31 @@
         setInterval(function() {
             if (clickBuffer.length === 0) return;
             var clicksToSave = clickBuffer.splice(0, clickBuffer.length);
-            console.log("Flushing clicks: count=" + clicksToSave.length); // Отладка
+            console.log("Flushing clicks: count=" + clicksToSave.length);
+            var updates = {};
             clicksToSave.forEach(function(click) {
+                if (!click.t || !click.b || click.b <= 0) {
+                    console.error("Invalid click data: ", click);
+                    return;
+                }
                 var key = click.t;
                 var data = firstClickTime === 0 ? { t: click.t, b: click.b } : { delta_t: click.t - firstClickTime, b: click.b };
                 if (firstClickTime === 0) firstClickTime = click.t;
-                set(ref(db, "users/" + userId + "/click_balance_history/" + key), data)
-                    .then(function() {
-                        console.log("Click saved: key=" + key + ", data=" + JSON.stringify(data)); // Отладка
-                    })
-                    .catch(function(error) {
-                        console.error("Error saving click: ", error);
-                    });
+                updates["click_balance_history/" + key] = data;
             });
-            saveData().then(function() {
-                updateUI();
-            });
+            if (Object.keys(updates).length === 0) {
+                console.log("No valid clicks to save");
+                return;
+            }
+            update(ref(db, "users/" + userId), updates)
+                .then(function() {
+                    console.log("Clicks saved: count=" + Object.keys(updates).length);
+                    saveData();
+                })
+                .catch(function(error) {
+                    console.error("Error saving clicks: ", error.message);
+                    alert("Failed to save clicks: " + error.message);
+                });
         }, BUFFER_FLUSH_INTERVAL);
 
         // Регенерация энергии
@@ -357,10 +350,8 @@
                 var increase = Math.floor(Math.min(rechargeRate, maxEnergy - energy));
                 energy += increase;
                 lastEnergyUpdate = now;
-                console.log("Energy regen: energy=" + energy + ", increase=" + increase); // Отладка
-                saveData().then(function() {
-                    updateUI();
-                });
+                console.log("Energy regen: energy=" + energy + ", increase=" + increase);
+                saveData();
             }
         }, ENERGY_UPDATE_INTERVAL);
 
@@ -370,10 +361,8 @@
             if (totalPassive > 0) {
                 balance += totalPassive;
                 serverBalance += totalPassive;
-                console.log("Passive income: balance=" + balance + ", totalPassive=" + totalPassive); // Отладка
-                saveData().then(function() {
-                    updateUI();
-                });
+                console.log("Passive income: balance=" + balance + ", totalPassive=" + totalPassive);
+                saveData();
             }
         }, 1000);
 
@@ -381,7 +370,7 @@
         async function saveData() {
             if (!userId) return;
             try {
-                await set(ref(db, "users/" + userId), {
+                const data = {
                     server_balance: serverBalance,
                     energy: energy,
                     max_energy: maxEnergy,
@@ -396,14 +385,20 @@
                             card3: buildBoostLevels("passive_income/card3")
                         }
                     }
-                });
-                console.log("Data saved: balance=" + serverBalance + ", energy=" + energy); // Отладка
+                };
+                if (!data.server_balance || !data.energy || !data.max_energy) {
+                    console.error("Invalid save data: ", data);
+                    return;
+                }
+                await set(ref(db, "users/" + userId), data);
+                console.log("Data saved: balance=" + serverBalance + ", energy=" + energy);
             } catch (error) {
-                console.error("Error saving data: ", error);
+                console.error("Error saving data: ", error.message);
+                alert("Failed to save data: " + error.message);
             }
         }
 
-        // Формирование структуры бустов с дельта-кодированием
+        // Формирование структуры бустов
         function buildBoostLevels(path) {
             var levels = {};
             var count, firstTime = firstClickTime || Date.now();
@@ -416,7 +411,7 @@
             else count = 0;
 
             for (var i = 1; i <= count; i++) {
-                levels[i] = i === 1 ? firstTime : firstTime + (3600000 * i); // Дельта-кодирование
+                levels[i] = i === 1 ? firstTime : firstTime + (3600000 * i);
             }
             return levels;
         }
@@ -441,12 +436,10 @@
             document.querySelector(".cost-passive-card3").innerText = Math.floor(1000 * (passiveIncome.card3 + 1) * (passiveIncome.card3 + 1));
         }
 
-
-                    // Покупка буста
+        // Покупка буста
         function buyBoost(type, path, cost, updateFn) {
-            console.log("Buy attempt: balance=" + balance + ", cost=" + cost); // Отладка
+            console.log("Buy attempt: balance=" + balance + ", cost=" + cost);
             if (balance >= cost) {
-                // Валидация баланса через click_balance_history
                 onValue(ref(db, "users/" + userId + "/click_balance_history"), function(snapshot) {
                     var calculatedBalance = 0;
                     if (snapshot.exists()) {
@@ -469,17 +462,18 @@
                     if (firstClickTime === 0) firstClickTime = now;
                     set(ref(db, "users/" + userId + "/boosts/" + path + "/" + level), timeValue)
                         .then(function() {
-                            console.log("Boost purchased: type=" + type + ", level=" + level + ", cost=" + cost + ", time=" + timeValue); // Отладка
+                            console.log("Boost purchased: type=" + type + ", level=" + level + ", cost=" + cost + ", time=" + timeValue);
                             saveData().then(function() {
                                 updateUI();
                             });
                         })
                         .catch(function(error) {
-                            console.error("Error saving boost " + type + ": ", error);
+                            console.error("Error saving boost " + type + ": ", error.message);
+                            alert("Failed to save boost: " + error.message);
                         });
                 }, { onlyOnce: true });
             } else {
-                console.log("Not enough coins: balance=" + balance + ", cost=" + cost); // Отладка
+                console.log("Not enough coins: balance=" + balance + ", cost=" + cost);
                 alert("Not enough coins!");
             }
         }
@@ -528,7 +522,7 @@
                 var shareUrl = "https://t.me/share/url?url=" + encodeURIComponent(inviteLink) + "&text=" + encodeURIComponent("Join my game!");
                 tg.openTelegramLink(shareUrl);
             } catch (error) {
-                console.error("Error generating invite link: ", error);
+                console.error("Error generating invite link: ", error.message);
                 alert("Failed to generate invite link. Please try again.");
             }
         });
