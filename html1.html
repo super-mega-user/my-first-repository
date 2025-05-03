@@ -185,7 +185,7 @@
         const tg = window.Telegram.WebApp;
         tg.expand();
 
-        let userId = tg.initDataUnsafe.user ? tg.initDataUnsafe.user.id : null;
+        let userId = tg.initDataUnsafe.user && tg.initDataUnsafe.user.id ? tg.initDataUnsafe.user.id : null;
         let balance = parseInt(localStorage.getItem("balance_" + userId)) || 0;
         let serverBalance = 0;
         let energy = 100;
@@ -204,23 +204,29 @@
         const pass1 = urlParams.get("pass1");
 
         // Проверка userId и pass1
-        if (!USerId || !pass1) {
-            alert("Error: Unable to get Telegram user ID or password");
-            tg.close();
-            return;
+        function initializeAppLogic() {
+            if (!userId || !pass1) {
+                alert("Error: Unable to get Telegram user ID or password");
+                tg.close();
+                return false;
+            }
+            return true;
         }
 
-        // Аутентификация
-        const email = userId + "@example.com";
-        signInWithEmailAndPassword(auth, email, pass1)
-            .then(function(userCredential) {
-                initializeUserData();
-                logLogin();
-            })
-            .catch(function(error) {
-                alert("Authentication failed: " + error.message); // Исправлено: конкатенация
-                tg.close();
-            });
+        // Выполнение инициализации
+        if (initializeAppLogic()) {
+            // Аутентификация
+            const email = userId + "@example.com";
+            signInWithEmailAndPassword(auth, email, pass1)
+                .then(function(userCredential) {
+                    initializeUserData();
+                    logLogin();
+                })
+                .catch(function(error) {
+                    alert("Authentication failed: " + error.message);
+                    tg.close();
+                });
+        }
 
         // Логирование входа с дельта-кодированием
         function logLogin() {
@@ -334,7 +340,6 @@
         function saveData() {
             if (!userId) return;
             set(ref(db, "users/" + userId), {
-                // balance, // Закомментировано, используется localStorage
                 server_balance: serverBalance,
                 energy: energy,
                 max_energy: maxEnergy,
@@ -361,7 +366,6 @@
             document.getElementById("energy").innerText = "Energy: " + Math.floor(energy) + "/" + maxEnergy;
             document.getElementById("energy-fill").style.width = (energy / maxEnergy) * 100 + "%";
 
-            // Обновление уровней и цен бустов
             document.querySelector(".level-multiply-per-click").innerText = clickPower;
             document.querySelector(".cost-multiply-per-click").innerText = Math.floor(100 * clickPower * clickPower);
             document.querySelector(".level-energy-limit").innerText = maxEnergy / 100;
