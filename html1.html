@@ -198,7 +198,7 @@
         let lastServerSync = 0;
         let lastLoginTime = 0;
         const SYNC_INTERVAL = 60000;
-        const MIN_CLICK_INTERVAL = 50;
+        const MIN_CLICK_INTERVAL = 100; // Увеличено до 100 мс
 
         // Извлечение pass1
         const urlParams = new URLSearchParams(window.location.search);
@@ -260,8 +260,8 @@
                     passiveIncome.card1 = data.boosts && data.boosts.passive_income && data.boosts.passive_income.card1 ? data.boosts.passive_income.card1.level || 0 : 0;
                     passiveIncome.card2 = data.boosts && data.boosts.passive_income && data.boosts.passive_income.card2 ? data.boosts.passive_income.card2.level || 0 : 0;
                     passiveIncome.card3 = data.boosts && data.boosts.passive_income && data.boosts.passive_income.card3 ? data.boosts.passive_income.card3.level || 0 : 0;
-                    lastServerSync = data.last_server_sync || now;
-                    console.log("Firebase sync: balance=" + balance + ", energy=" + energy + ", clickPower=" + clickPower); // Отладка
+                    lastServerSync = data.last_server_sync || Date.now();
+                    console.log("Firebase init: balance=" + balance + ", energy=" + energy + ", clickPower=" + clickPower); // Отладка
                     updateUI();
                     syncServerBalance();
                 } else {
@@ -269,10 +269,7 @@
                     saveData();
                     updateUI();
                 }
-            }, function(error) {
-                console.error("Failed to load user data: " + error.message);
-                alert("Failed to load user data: " + error.message);
-            });
+            }, { onlyOnce: true }); // Однократное чтение
         }
 
         // Обработчик кликов
@@ -294,8 +291,17 @@
                     b: clickPower
                 }).then(function() {
                     console.log("Click saved to history: clickPower=" + clickPower); // Отладка
-                    saveData();
-                    updateUI();
+                    push(ref(db, "users/" + userId + "/energy_history"), {
+                        t: now,
+                        delta_e: -1 // Уменьшение энергии
+                    }).then(function() {
+                        console.log("Energy decrease saved: delta_e=-1"); // Отладка
+                        saveData().then(function() {
+                            updateUI();
+                        });
+                    }).catch(function(error) {
+                        console.error("Error saving energy history: ", error);
+                    });
                 }).catch(function(error) {
                     console.error("Error saving click history: ", error);
                 });
@@ -305,16 +311,25 @@
             }
         });
 
-        // Регенерация энергии
+        // Регенерация энергии через Firebase
         setInterval(function() {
             var now = Date.now();
             if (energy < maxEnergy) {
-                energy = Math.min(energy + rechargeRate, maxEnergy); // Уменьшен шаг регенерации
-                console.log("Regen: energy=" + energy + ", maxEnergy=" + maxEnergy); // Отладка
-                saveData();
-                updateUI();
+                var increase = Math.min(rechargeRate, maxEnergy - energy);
+                energy += increase;
+                push(ref(db, "users/" + userId + "/energy_history"), {
+                    t: now,
+                    delta_e: increase
+                }).then(function() {
+                    console.log("Energy regen saved: delta_e=" + increase + ", energy=" + energy); // Отладка
+                    saveData().then(function() {
+                        updateUI();
+                    });
+                }).catch(function(error) {
+                    console.error("Error saving energy regen: ", error);
+                });
             }
-        }, 1000); // Увеличен интервал до 1000 мс
+        }, 1000); // Регенерация каждую секунду
 
         // Пассивный доход
         setInterval(function() {
@@ -323,10 +338,11 @@
                 balance += totalPassive;
                 serverBalance += totalPassive;
                 console.log("Passive income: balance=" + balance + ", totalPassive=" + totalPassive); // Отладка
-                saveData();
-                updateUI();
+                saveData().then(function() {
+                    updateUI();
+                });
             }
-        }, 1000); // Увеличен интервал до 1000 мс
+        }, 1000); // Пассивный доход каждую секунду
 
         // Синхронизация с сервером
         function syncServerBalance() {
@@ -355,35 +371,38 @@
                     serverBalance = calculatedBalance;
                     balance = serverBalance;
                     console.log("Server sync: balance=" + balance); // Отладка
-                    saveData();
+                    saveData().then(function() {
+                        updateUI();
+                    });
                 }
-            }, { onlyOnce: true });
+            }, { onlyOnce: true }); // Однократное чтение
         }
 
         // Сохранение данных
-        function saveData() {
+        async function saveData() {
             if (!userId) return;
-            set(ref(db, "users/" + userId), {
-                server_balance: serverBalance,
-                energy: energy,
-                max_energy: maxEnergy,
-                recharge_rate: rechargeRate,
-                boosts: {
-                    energy_limit: { level: maxEnergy, purchases: [] },
-                    multiply_per_click: { level: clickPower, purchases: [] },
-                    recharge_energy: { level: rechargeRate, purchases: [] },
-                    passive_income: {
-                        card1: { level: passiveIncome.card1, purchases: [] },
-                        card2: { level: passiveIncome.card2, purchases: [] },
-                        card3: { level: passiveIncome.card3, purchases: [] }
-                    }
-                },
-                last_server_sync: Date.now()
-            }).then(function() {
+            try {
+                await set(ref(db, "users/" + userId), {
+                    server_balance: serverBalance,
+                    energy: energy,
+                    max_energy: maxEnergy,
+                    recharge_rate: rechargeRate,
+                    boosts: {
+                        energy_limit: { level: maxEnergy, purchases: [] },
+                        multiply_per_click: { level: clickPower, purchases: [] },
+                        recharge_energy: { level: rechargeRate, purchases: [] },
+                        passive_income: {
+                            card1: { level: passiveIncome.card1, purchases: [] },
+                            card2: { level: passiveIncome.card2, purchases: [] },
+                            card3: { level: passiveIncome.card3, purchases: [] }
+                        }
+                    },
+                    last_server_sync: Date.now()
+                });
                 console.log("Data saved: balance=" + serverBalance + ", energy=" + energy); // Отладка
-            }).catch(function(error) {
+            } catch (error) {
                 console.error("Error saving data: ", error);
-            });
+            }
         }
 
         // Обновление UI
@@ -420,9 +439,10 @@
                     delta_t: lastClickTime ? now - lastClickTime : 0
                 }).then(function() {
                     console.log("Boost purchased: type=" + type + ", cost=" + cost); // Отладка
-                    saveData();
-                    updateUI();
-                    syncServerBalance();
+                    saveData().then(function() {
+                        updateUI();
+                        syncServerBalance();
+                    });
                 }).catch(function(error) {
                     console.error("Error saving boost " + type + ": ", error);
                 });
@@ -433,7 +453,7 @@
         }
 
         // Привязка кнопок бустов
-        // Привязка кнопок бустов
+            // Привязка кнопок бустов
         document.querySelector(".boost-multiply-per-click").addEventListener("click", function() {
             var cost = Math.floor(100 * clickPower * clickPower);
             buyBoost("multiply_per_click", "multiply_per_click", cost, function() { clickPower += 1; });
