@@ -7,7 +7,6 @@
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        /* Ваш существующий CSS без изменений */
         :root {
             --tg-theme-bg-color: #ffffff;
             --tg-theme-text-color: #000000;
@@ -187,7 +186,7 @@
         tg.expand();
 
         let userId = tg.initDataUnsafe.user?.id;
-        let balance = parseInt(localStorage.getItem(balance_${userId})) || 0; // Локальный баланс из localStorage
+        let balance = parseInt(localStorage.getItem(balance_${userId})) || 0;
         let serverBalance = 0;
         let energy = 100;
         let maxEnergy = 100;
@@ -208,25 +207,28 @@
         if (!userId || !pass1) {
             alert("Error: Unable to get Telegram user ID or password");
             tg.close();
-        } else {
-            const email = userId + "@example.com";
-            signInWithEmailAndPassword(auth, email, pass1)
-                .then((userCredential) => {
-                    initializeUserData();
-                    logLogin();
-                })
-                .catch((error) => {
-                    alert("Authentication failed: " + error.message);
-                    tg.close();
-                });
+            return;
         }
+
+        // Аутентификация
+        const email = ${userId}@example.com;
+        signInWithEmailAndPassword(auth, email, pass1)
+            .then((userCredential) => {
+                initializeUserData();
+                logLogin();
+            })
+            .catch((error) => {
+                alert(Authentication failed: ${error.message});
+                tg.close();
+            });
 
         // Логирование входа с дельта-кодированием
         function logLogin() {
             const now = Date.now();
             const deltaT = lastLoginTime ? now - lastLoginTime : 0;
             lastLoginTime = now;
-            push(ref(db, users/${userId}/login_timestamps), deltaT);
+            push(ref(db, users/${userId}/login_timestamps), deltaT)
+                .catch((error) => console.error("Error logging login:", error));
         }
 
         // Инициализация данных
@@ -244,7 +246,6 @@
                     passiveIncome.card2 = data.boosts?.passive_income?.card2?.level || 0;
                     passiveIncome.card3 = data.boosts?.passive_income?.card3?.level || 0;
                     lastServerSync = data.last_server_sync || Date.now();
-                    // balance = data.balance || 0; // Закомментировано, используется localStorage
                     balance = parseInt(localStorage.getItem(balance_${userId})) || serverBalance;
                     updateUI();
                     syncServerBalance();
@@ -253,7 +254,7 @@
                     updateUI();
                 }
             }, (error) => {
-                alert("Failed to load user data: " + error.message);
+                alert(Failed to load user data: ${error.message});
             });
         }
 
@@ -271,7 +272,7 @@
                 push(ref(db, users/${userId}/click_balance_history), {
                     delta_t: lastClickTime ? now - lastClickTime : 0,
                     b: clickPower
-                });
+                }).catch((error) => console.error("Error saving click history:", error));
                 saveData();
                 updateUI();
             } else {
@@ -354,7 +355,7 @@
         function updateUI() {
             document.getElementById("balance").innerText = Math.floor(balance);
             document.getElementById("energy").innerText = Energy: ${Math.floor(energy)}/${maxEnergy};
-            document.getElementById("energy-fill").style.width = (energy / maxEnergy) * 100 + "%";
+            document.getElementById("energy-fill").style.width = ${(energy / maxEnergy) * 100}%;
 
             // Обновление уровней и цен бустов
             document.querySelector(".level-multiply-per-click").innerText = clickPower;
@@ -382,7 +383,7 @@
                     t: now,
                     cost,
                     delta_t: lastClickTime ? now - lastClickTime : 0
-                });
+                }).catch((error) => console.error(Error saving boost ${type}:, error));
                 saveData();
                 updateUI();
                 syncServerBalance();
@@ -402,7 +403,7 @@
         });
         document.querySelector(".boost-recharge-energy").addEventListener("click", () => {
             const cost = Math.floor(150 * rechargeRate ** 2);
-            buyBoost("recharge_energy", "recharge_energy", cost, () => rechargeRate += 0.5);
+            buyBoost("recharge_energy", "recharge_energy", cost, одни => rechargeRate += 0.5);
         });
         document.querySelector(".boost-passive-card1").addEventListener("click", () => {
             const cost = Math.floor(300 * (passiveIncome.card1 + 1) ** 2);
@@ -419,9 +420,14 @@
 
         // Приглашение друга
         document.querySelector(".invite-friend").addEventListener("click", () => {
-            const inviteLink = https://t.me/your_bot?start=${userId};
-            const shareUrl = https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=Join%20my%20game!;
-            tg.openTelegramLink(shareUrl);
+            try {
+                const inviteLink = https://t.me/your_bot?start=${encodeURIComponent(userId)};
+                const shareUrl = https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${encodeURIComponent("Join my game!")};
+                tg.openTelegramLink(shareUrl);
+            } catch (error) {
+                console.error("Error generating invite link:", error);
+                alert("Failed to generate invite link. Please try again.");
+            }
         });
 
         // Навигация по вкладкам
