@@ -185,8 +185,8 @@
         const tg = window.Telegram.WebApp;
         tg.expand();
 
-        let userId = tg.initDataUnsafe.user?.id;
-        let balance = parseInt(localStorage.getItem(balance_${userId})) || 0;
+        let userId = tg.initDataUnsafe.user ? tg.initDataUnsafe.user.id : null;
+        let balance = parseInt(localStorage.getItem("balance_" + userId)) || 0;
         let serverBalance = 0;
         let energy = 100;
         let maxEnergy = 100;
@@ -204,63 +204,65 @@
         const pass1 = urlParams.get("pass1");
 
         // Проверка userId и pass1
-        if (!userId || !pass1) {
+        if (!USerId || !pass1) {
             alert("Error: Unable to get Telegram user ID or password");
             tg.close();
             return;
         }
 
         // Аутентификация
-        const email = ${userId}@example.com;
+        const email = userId + "@example.com";
         signInWithEmailAndPassword(auth, email, pass1)
-            .then((userCredential) => {
+            .then(function(userCredential) {
                 initializeUserData();
                 logLogin();
             })
-            .catch((error) => {
-                alert(Authentication failed: ${error.message});
+            .catch(function(error) {
+                alert("Authentication failed: " + error.message); // Исправлено: конкатенация
                 tg.close();
             });
 
         // Логирование входа с дельта-кодированием
         function logLogin() {
-            const now = Date.now();
-            const deltaT = lastLoginTime ? now - lastLoginTime : 0;
+            var now = Date.now();
+            var deltaT = lastLoginTime ? now - lastLoginTime : 0;
             lastLoginTime = now;
-            push(ref(db, users/${userId}/login_timestamps), deltaT)
-                .catch((error) => console.error("Error logging login:", error));
+            push(ref(db, "users/" + userId + "/login_timestamps"), deltaT)
+                .catch(function(error) {
+                    console.error("Error logging login: ", error);
+                });
         }
 
         // Инициализация данных
         function initializeUserData() {
-            const userRef = ref(db, users/${userId});
-            onValue(userRef, (snapshot) => {
+            var userRef = ref(db, "users/" + userId);
+            onValue(userRef, function(snapshot) {
                 if (snapshot.exists()) {
-                    const data = snapshot.val();
+                    var data = snapshot.val();
                     serverBalance = data.server_balance || 0;
                     energy = data.energy || maxEnergy;
                     maxEnergy = data.max_energy || 100;
                     rechargeRate = data.recharge_rate || 1;
-                    clickPower = data.boosts?.multiply_per_click?.level || 1;
-                    passiveIncome.card1 = data.boosts?.passive_income?.card1?.level || 0;
-                    passiveIncome.card2 = data.boosts?.passive_income?.card2?.level || 0;
-                    passiveIncome.card3 = data.boosts?.passive_income?.card3?.level || 0;
+                    clickPower = data.boosts && data.boosts.multiply_per_click ? data.boosts.multiply_per_click.level || 1 : 1;
+                    passiveIncome.card1 = data.boosts && data.boosts.passive_income && data.boosts.passive_income.card1 ? data.boosts.passive_income.card1.level || 0 : 0;
+                    passiveIncome.card2 = data.boosts && data.boosts.passive_income && data.boosts.passive_income.card2 ? data.boosts.passive_income.card2.level || 0 : 0;
+                    passiveIncome.card3 = data.boosts && data.boosts.passive_income && data.boosts.passive_income.card3 ? data.boosts.passive_income.card3.level || 0 : 0;
                     lastServerSync = data.last_server_sync || Date.now();
-                    balance = parseInt(localStorage.getItem(balance_${userId})) || serverBalance;
+                    balance = parseInt(localStorage.getItem("balance_" + userId)) || serverBalance;
                     updateUI();
                     syncServerBalance();
                 } else {
                     saveData();
                     updateUI();
                 }
-            }, (error) => {
-                alert(Failed to load user data: ${error.message});
+            }, function(error) {
+                alert("Failed to load user data: " + error.message);
             });
         }
 
         // Обработчик кликов
-        document.getElementById("click").addEventListener("click", () => {
-            const now = Date.now();
+        document.getElementById("click").addEventListener("click", function() {
+            var now = Date.now();
             if (now - lastClickTime < MIN_CLICK_INTERVAL) return;
             lastClickTime = now;
 
@@ -268,11 +270,13 @@
                 energy -= 1;
                 balance += clickPower;
                 serverBalance += clickPower;
-                localStorage.setItem(balance_${userId}, balance);
-                push(ref(db, users/${userId}/click_balance_history), {
+                localStorage.setItem("balance_" + userId, balance);
+                push(ref(db, "users/" + userId + "/click_balance_history"), {
                     delta_t: lastClickTime ? now - lastClickTime : 0,
                     b: clickPower
-                }).catch((error) => console.error("Error saving click history:", error));
+                }).catch(function(error) {
+                    console.error("Error saving click history: ", error);
+                });
                 saveData();
                 updateUI();
             } else {
@@ -281,7 +285,7 @@
         });
 
         // Регенерация энергии
-        setInterval(() => {
+        setInterval(function() {
             if (energy < maxEnergy) {
                 energy = Math.min(energy + rechargeRate / 10, maxEnergy);
                 updateUI();
@@ -289,27 +293,27 @@
         }, 100);
 
         // Пассивный доход
-        setInterval(() => {
-            const totalPassive = passiveIncome.card1 + passiveIncome.card2 + passiveIncome.card3;
+        setInterval(function() {
+            var totalPassive = passiveIncome.card1 + passiveIncome.card2 + passiveIncome.card3;
             if (totalPassive > 0) {
                 balance += totalPassive / 10;
-                localStorage.setItem(balance_${userId}, balance);
+                localStorage.setItem("balance_" + userId, balance);
                 updateUI();
             }
         }, 100);
 
         // Синхронизация с сервером
         function syncServerBalance() {
-            const now = Date.now();
+            var now = Date.now();
             if (now - lastServerSync < SYNC_INTERVAL) return;
 
             lastServerSync = now;
-            const historyRef = ref(db, users/${userId}/click_balance_history);
-            onValue(historyRef, (snapshot) => {
+            var historyRef = ref(db, "users/" + userId + "/click_balance_history");
+            onValue(historyRef, function(snapshot) {
                 if (snapshot.exists()) {
-                    const history = snapshot.val();
-                    let calculatedBalance = 0;
-                    Object.values(history).forEach(entry => {
+                    var history = snapshot.val();
+                    var calculatedBalance = 0;
+                    Object.values(history).forEach(function(entry) {
                         calculatedBalance += entry.b;
                     });
 
@@ -329,10 +333,10 @@
         // Сохранение данных
         function saveData() {
             if (!userId) return;
-            set(ref(db, users/${userId}), {
+            set(ref(db, "users/" + userId), {
                 // balance, // Закомментировано, используется localStorage
                 server_balance: serverBalance,
-                energy,
+                energy: energy,
                 max_energy: maxEnergy,
                 recharge_rate: rechargeRate,
                 boosts: {
@@ -346,44 +350,46 @@
                     }
                 },
                 last_server_sync: lastServerSync
-            }).catch((error) => {
-                console.error("Error saving data:", error);
+            }).catch(function(error) {
+                console.error("Error saving data: ", error);
             });
         }
 
         // Обновление UI
         function updateUI() {
             document.getElementById("balance").innerText = Math.floor(balance);
-            document.getElementById("energy").innerText = Energy: ${Math.floor(energy)}/${maxEnergy};
-            document.getElementById("energy-fill").style.width = ${(energy / maxEnergy) * 100}%;
+            document.getElementById("energy").innerText = "Energy: " + Math.floor(energy) + "/" + maxEnergy;
+            document.getElementById("energy-fill").style.width = (energy / maxEnergy) * 100 + "%";
 
             // Обновление уровней и цен бустов
             document.querySelector(".level-multiply-per-click").innerText = clickPower;
-            document.querySelector(".cost-multiply-per-click").innerText = Math.floor(100 * clickPower ** 2);
+            document.querySelector(".cost-multiply-per-click").innerText = Math.floor(100 * clickPower * clickPower);
             document.querySelector(".level-energy-limit").innerText = maxEnergy / 100;
-            document.querySelector(".cost-energy-limit").innerText = Math.floor(200 * (maxEnergy / 100) ** 2);
+            document.querySelector(".cost-energy-limit").innerText = Math.floor(200 * (maxEnergy / 100) * (maxEnergy / 100));
             document.querySelector(".level-recharge-energy").innerText = rechargeRate;
-            document.querySelector(".cost-recharge-energy").innerText = Math.floor(150 * rechargeRate ** 2);
+            document.querySelector(".cost-recharge-energy").innerText = Math.floor(150 * rechargeRate * rechargeRate);
             document.querySelector(".level-passive-card1").innerText = passiveIncome.card1;
-            document.querySelector(".cost-passive-card1").innerText = Math.floor(300 * (passiveIncome.card1 + 1) ** 2);
+            document.querySelector(".cost-passive-card1").innerText = Math.floor(300 * (passiveIncome.card1 + 1) * (passiveIncome.card1 + 1));
             document.querySelector(".level-passive-card2").innerText = passiveIncome.card2;
-            document.querySelector(".cost-passive-card2").innerText = Math.floor(500 * (passiveIncome.card2 + 1) ** 2);
+            document.querySelector(".cost-passive-card2").innerText = Math.floor(500 * (passiveIncome.card2 + 1) * (passiveIncome.card2 + 1));
             document.querySelector(".level-passive-card3").innerText = passiveIncome.card3;
-            document.querySelector(".cost-passive-card3").innerText = Math.floor(1000 * (passiveIncome.card3 + 1) ** 2);
+            document.querySelector(".cost-passive-card3").innerText = Math.floor(1000 * (passiveIncome.card3 + 1) * (passiveIncome.card3 + 1));
         }
 
         // Покупка буста
         function buyBoost(type, path, cost, updateFn) {
             if (balance >= cost) {
                 balance -= cost;
-                localStorage.setItem(balance_${userId}, balance);
+                localStorage.setItem("balance_" + userId, balance);
                 updateFn();
-                const now = Date.now();
-                push(ref(db, users/${userId}/boosts/${path}/purchases), {
+                var now = Date.now();
+                push(ref(db, "users/" + userId + "/boosts/" + path + "/purchases"), {
                     t: now,
-                    cost,
+                    cost: cost,
                     delta_t: lastClickTime ? now - lastClickTime : 0
-                }).catch((error) => console.error(Error saving boost ${type}:, error));
+                }).catch(function(error) {
+                    console.error("Error saving boost " + type + ": ", error);
+                });
                 saveData();
                 updateUI();
                 syncServerBalance();
@@ -393,51 +399,51 @@
         }
 
         // Привязка кнопок бустов
-        document.querySelector(".boost-multiply-per-click").addEventListener("click", () => {
-            const cost = Math.floor(100 * clickPower ** 2);
-            buyBoost("multiply_per_click", "multiply_per_click", cost, () => clickPower += 1);
+        document.querySelector(".boost-multiply-per-click").addEventListener("click", function() {
+            var cost = Math.floor(100 * clickPower * clickPower);
+            buyBoost("multiply_per_click", "multiply_per_click", cost, function() { clickPower += 1; });
         });
-        document.querySelector(".boost-energy-limit").addEventListener("click", () => {
-            const cost = Math.floor(200 * (maxEnergy / 100) ** 2);
-            buyBoost("energy_limit", "energy_limit", cost, () => maxEnergy += 100);
+        document.querySelector(".boost-energy-limit").addEventListener("click", function() {
+            var cost = Math.floor(200 * (maxEnergy / 100) * (maxEnergy / 100));
+            buyBoost("energy_limit", "energy_limit", cost, function() { maxEnergy += 100; });
         });
-        document.querySelector(".boost-recharge-energy").addEventListener("click", () => {
-            const cost = Math.floor(150 * rechargeRate ** 2);
-            buyBoost("recharge_energy", "recharge_energy", cost, одни => rechargeRate += 0.5);
+        document.querySelector(".boost-recharge-energy").addEventListener("click", function() {
+            var cost = Math.floor(150 * rechargeRate * rechargeRate);
+            buyBoost("recharge_energy", "recharge_energy", cost, function() { rechargeRate += 0.5; });
         });
-        document.querySelector(".boost-passive-card1").addEventListener("click", () => {
-            const cost = Math.floor(300 * (passiveIncome.card1 + 1) ** 2);
-            buyBoost("passive_income/card1", "passive_income/card1", cost, () => passiveIncome.card1 += 1);
+        document.querySelector(".boost-passive-card1").addEventListener("click", function() {
+            var cost = Math.floor(300 * (passiveIncome.card1 + 1) * (passiveIncome.card1 + 1));
+            buyBoost("passive_income/card1", "passive_income/card1", cost, function() { passiveIncome.card1 += 1; });
         });
-        document.querySelector(".boost-passive-card2").addEventListener("click", () => {
-            const cost = Math.floor(500 * (passiveIncome.card2 + 1) ** 2);
-            buyBoost("passive_income/card2", "passive_income/card2", cost, () => passiveIncome.card2 += 2);
+        document.querySelector(".boost-passive-card2").addEventListener("click", function() {
+            var cost = Math.floor(500 * (passiveIncome.card2 + 1) * (passiveIncome.card2 + 1));
+            buyBoost("passive_income/card2", "passive_income/card2", cost, function() { passiveIncome.card2 += 2; });
         });
-        document.querySelector(".boost-passive-card3").addEventListener("click", () => {
-            const cost = Math.floor(1000 * (passiveIncome.card3 + 1) ** 2);
-            buyBoost("passive_income/card3", "passive_income/card3", cost, () => passiveIncome.card3 += 5);
+        document.querySelector(".boost-passive-card3").addEventListener("click", function() {
+            var cost = Math.floor(1000 * (passiveIncome.card3 + 1) * (passiveIncome.card3 + 1));
+            buyBoost("passive_income/card3", "passive_income/card3", cost, function() { passiveIncome.card3 += 5; });
         });
 
         // Приглашение друга
-        document.querySelector(".invite-friend").addEventListener("click", () => {
+        document.querySelector(".invite-friend").addEventListener("click", function() {
             try {
-                const inviteLink = https://t.me/your_bot?start=${encodeURIComponent(userId)};
-                const shareUrl = https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${encodeURIComponent("Join my game!")};
+                var inviteLink = "https://t.me/your_bot?start=" + encodeURIComponent(userId);
+                var shareUrl = "https://t.me/share/url?url=" + encodeURIComponent(inviteLink) + "&text=" + encodeURIComponent("Join my game!");
                 tg.openTelegramLink(shareUrl);
             } catch (error) {
-                console.error("Error generating invite link:", error);
+                console.error("Error generating invite link: ", error);
                 alert("Failed to generate invite link. Please try again.");
             }
         });
 
         // Навигация по вкладкам
-        document.querySelectorAll(".tab").forEach(tab => {
-            tab.addEventListener("click", () => {
-                const tabIndex = parseInt(tab.getAttribute("data-tab"));
-                document.querySelectorAll(".content").forEach((content, index) => {
+        document.querySelectorAll(".tab").forEach(function(tab) {
+            tab.addEventListener("click", function() {
+                var tabIndex = parseInt(tab.getAttribute("data-tab"));
+                document.querySelectorAll(".content").forEach(function(content, index) {
                     content.style.display = index === tabIndex - 1 ? "block" : "none";
                 });
-                document.querySelectorAll(".tab").forEach((t, index) => {
+                document.querySelectorAll(".tab").forEach(function(t, index) {
                     t.classList.toggle("active", index === tabIndex - 1);
                 });
             });
