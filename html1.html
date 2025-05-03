@@ -4,9 +4,116 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>clicker123</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         /* Ваш существующий CSS без изменений */
+        :root {
+            --tg-theme-bg-color: #ffffff;
+            --tg-theme-text-color: #000000;
+            --tg-theme-hint-color: #999999;
+            --tg-theme-link-color: #007bff;
+            --tg-theme-button-color: #007bff;
+            --tg-theme-button-text-color: #ffffff;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            color: var(--tg-theme-text-color);
+            background: var(--tg-theme-bg-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            font-size: 18px;
+        }
+
+        .content {
+            flex: 1;
+            padding: 20px;
+            width: 100%;
+            max-width: 600px;
+            box-sizing: border-box;
+            overflow-y: auto;
+        }
+
+        .tabs {
+            display: flex;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            max-width: 600px;
+            background: var(--tg-theme-bg-color);
+            box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .tab {
+            flex: 1;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            border-top: 2px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            border-top: 2px solid var(--tg-theme-button-color);
+            background: #f5f5f5;
+        }
+
+        .image-button {
+            width: 200px;
+            height: 200px;
+            border: none;
+            background-image: url('https://gas-kvas.com/grafic/uploads/posts/2024-01/gas-kvas-com-p-znachok-bitkoina-na-prozrachnom-fone-15.png');
+            background-size: cover;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .image-button:active {
+            transform: scale(0.95);
+        }
+
+        .button {
+            background: var(--tg-theme-button-color);
+            color: var(--tg-theme-button-text-color);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px 0;
+        }
+
+        .energy-bar {
+            width: 100%;
+            height: 20px;
+            background: #ddd;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .energy-fill {
+            height: 100%;
+            background: var(--tg-theme-button-color);
+            transition: width 0.3s;
+        }
+
+        #balance, #energy {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .boost-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
     </style>
 </head>
 <body>
@@ -20,28 +127,28 @@
         <h2>Boosts</h2>
         <div id="boosts">
             <div class="boost-item">
-                <span>Click Power +1</span>
-                <button class="button boost-multiply-per-click">Buy (<span class="cost">100</span>)</button>
+                <span>Click Power +1 (Level <span class="level-multiply-per-click">1</span>)</span>
+                <button class="button boost-multiply-per-click">Buy (<span class="cost-multiply-per-click">100</span>)</button>
             </div>
             <div class="boost-item">
-                <span>Energy Limit +100</span>
-                <button class="button boost-energy-limit">Buy (<span class="cost">200</span>)</button>
+                <span>Energy Limit +100 (Level <span class="level-energy-limit">1</span>)</span>
+                <button class="button boost-energy-limit">Buy (<span class="cost-energy-limit">200</span>)</button>
             </div>
             <div class="boost-item">
-                <span>Faster Energy Recharge</span>
-                <button class="button boost-recharge-energy">Buy (<span class="cost">150</span>)</button>
+                <span>Faster Energy Recharge (Level <span class="level-recharge-energy">1</span>)</span>
+                <button class="button boost-recharge-energy">Buy (<span class="cost-recharge-energy">150</span>)</button>
             </div>
             <div class="boost-item">
-                <span>Passive Income (Card 1)</span>
-                <button class="button boost-passive-card1">Buy (<span class="cost">300</span>)</button>
+                <span>Passive Income Card 1 (Level <span class="level-passive-card1">0</span>)</span>
+                <button class="button boost-passive-card1">Buy (<span class="cost-passive-card1">300</span>)</button>
             </div>
             <div class="boost-item">
-                <span>Passive Income (Card 2)</span>
-                <button class="button boost-passive-card2">Buy (<span class="cost">500</span>)</button>
+                <span>Passive Income Card 2 (Level <span class="level-passive-card2">0</span>)</span>
+                <button class="button boost-passive-card2">Buy (<span class="cost-passive-card2">500</span>)</button>
             </div>
             <div class="boost-item">
-                <span>Passive Income (Card 3)</span>
-                <button class="button boost-passive-card3">Buy (<span class="cost">1000</span>)</button>
+                <span>Passive Income Card 3 (Level <span class="level-passive-card3">0</span>)</span>
+                <button class="button boost-passive-card3">Buy (<span class="cost-passive-card3">1000</span>)</button>
             </div>
         </div>
     </div>
@@ -80,55 +187,65 @@
         tg.expand();
 
         let userId = tg.initDataUnsafe.user?.id;
-        let balance = 0;
+        let balance = parseInt(localStorage.getItem(balance_${userId})) || 0; // Локальный баланс из localStorage
         let serverBalance = 0;
         let energy = 100;
         let maxEnergy = 100;
+        let rechargeRate = 1;
         let clickPower = 1;
-        let rechargeRate = 1; // Энергия в секунду
         let passiveIncome = { card1: 0, card2: 0, card3: 0 };
         let lastClickTime = 0;
         let lastServerSync = 0;
-        const SYNC_INTERVAL = 60000; // Синхронизация каждые 60 секунд
-        const MIN_CLICK_INTERVAL = 50; // Защита от множественных кликов (50 мс)
+        let lastLoginTime = 0;
+        const SYNC_INTERVAL = 60000;
+        const MIN_CLICK_INTERVAL = 50;
 
-        // Извлечение pass1 из URL
+        // Извлечение pass1
         const urlParams = new URLSearchParams(window.location.search);
         const pass1 = urlParams.get("pass1");
 
+        // Проверка userId и pass1
         if (!userId || !pass1) {
             alert("Error: Unable to get Telegram user ID or password");
             tg.close();
-            return;
+        } else {
+            const email = userId + "@example.com";
+            signInWithEmailAndPassword(auth, email, pass1)
+                .then((userCredential) => {
+                    initializeUserData();
+                    logLogin();
+                })
+                .catch((error) => {
+                    alert("Authentication failed: " + error.message);
+                    tg.close();
+                });
         }
 
-        // Аутентификация
-        const email = userId + "@example.com";
-        signInWithEmailAndPassword(auth, email, pass1)
-            .then((userCredential) => {
-                initializeUserData();
-            })
-            .catch((error) => {
-                alert("Authentication failed: " + error.message);
-                tg.close();
-            });
+        // Логирование входа с дельта-кодированием
+        function logLogin() {
+            const now = Date.now();
+            const deltaT = lastLoginTime ? now - lastLoginTime : 0;
+            lastLoginTime = now;
+            push(ref(db, users/${userId}/login_timestamps), deltaT);
+        }
 
-        // Инициализация данных пользователя
+        // Инициализация данных
         function initializeUserData() {
-            const userRef = ref(db, "users/" + userId);
+            const userRef = ref(db, users/${userId});
             onValue(userRef, (snapshot) => {
                 if (snapshot.exists()) {
                     const data = snapshot.val();
-                    balance = data.balance || 0;
                     serverBalance = data.server_balance || 0;
                     energy = data.energy || maxEnergy;
                     maxEnergy = data.max_energy || 100;
+                    rechargeRate = data.recharge_rate || 1;
                     clickPower = data.boosts?.multiply_per_click?.level || 1;
-                    rechargeRate = data.boosts?.recharge_energy?.level || 1;
                     passiveIncome.card1 = data.boosts?.passive_income?.card1?.level || 0;
                     passiveIncome.card2 = data.boosts?.passive_income?.card2?.level || 0;
                     passiveIncome.card3 = data.boosts?.passive_income?.card3?.level || 0;
                     lastServerSync = data.last_server_sync || Date.now();
+                    // balance = data.balance || 0; // Закомментировано, используется localStorage
+                    balance = parseInt(localStorage.getItem(balance_${userId})) || serverBalance;
                     updateUI();
                     syncServerBalance();
                 } else {
@@ -143,16 +260,17 @@
         // Обработчик кликов
         document.getElementById("click").addEventListener("click", () => {
             const now = Date.now();
-            if (now - lastClickTime < MIN_CLICK_INTERVAL) return; // Защита от спама
+            if (now - lastClickTime < MIN_CLICK_INTERVAL) return;
             lastClickTime = now;
 
             if (energy >= 1) {
                 energy -= 1;
                 balance += clickPower;
                 serverBalance += clickPower;
+                localStorage.setItem(balance_${userId}, balance);
                 push(ref(db, users/${userId}/click_balance_history), {
-                    t: now,
-                    b: serverBalance
+                    delta_t: lastClickTime ? now - lastClickTime : 0,
+                    b: clickPower
                 });
                 saveData();
                 updateUI();
@@ -164,7 +282,7 @@
         // Регенерация энергии
         setInterval(() => {
             if (energy < maxEnergy) {
-                energy = Math.min(energy + rechargeRate / 10, maxEnergy); // Делим на 10 для плавности
+                energy = Math.min(energy + rechargeRate / 10, maxEnergy);
                 updateUI();
             }
         }, 100);
@@ -173,8 +291,8 @@
         setInterval(() => {
             const totalPassive = passiveIncome.card1 + passiveIncome.card2 + passiveIncome.card3;
             if (totalPassive > 0) {
-                balance += totalPassive / 10; // Делим на 10 для плавности
-                saveData();
+                balance += totalPassive / 10;
+                localStorage.setItem(balance_${userId}, balance);
                 updateUI();
             }
         }, 100);
@@ -185,8 +303,8 @@
             if (now - lastServerSync < SYNC_INTERVAL) return;
 
             lastServerSync = now;
-            const userRef = ref(db, users/${userId}/click_balance_history);
-            onValue(userRef, (snapshot) => {
+            const historyRef = ref(db, users/${userId}/click_balance_history);
+            onValue(historyRef, (snapshot) => {
                 if (snapshot.exists()) {
                     const history = snapshot.val();
                     let calculatedBalance = 0;
@@ -210,11 +328,12 @@
         // Сохранение данных
         function saveData() {
             if (!userId) return;
-            set(ref(db, "users/" + userId), {
-                balance,
+            set(ref(db, users/${userId}), {
+                // balance, // Закомментировано, используется localStorage
                 server_balance: serverBalance,
                 energy,
                 max_energy: maxEnergy,
+                recharge_rate: rechargeRate,
                 boosts: {
                     energy_limit: { level: maxEnergy, purchases: [] },
                     multiply_per_click: { level: clickPower, purchases: [] },
@@ -236,16 +355,33 @@
             document.getElementById("balance").innerText = Math.floor(balance);
             document.getElementById("energy").innerText = Energy: ${Math.floor(energy)}/${maxEnergy};
             document.getElementById("energy-fill").style.width = (energy / maxEnergy) * 100 + "%";
+
+            // Обновление уровней и цен бустов
+            document.querySelector(".level-multiply-per-click").innerText = clickPower;
+            document.querySelector(".cost-multiply-per-click").innerText = Math.floor(100 * clickPower ** 2);
+            document.querySelector(".level-energy-limit").innerText = maxEnergy / 100;
+            document.querySelector(".cost-energy-limit").innerText = Math.floor(200 * (maxEnergy / 100) ** 2);
+            document.querySelector(".level-recharge-energy").innerText = rechargeRate;
+            document.querySelector(".cost-recharge-energy").innerText = Math.floor(150 * rechargeRate ** 2);
+            document.querySelector(".level-passive-card1").innerText = passiveIncome.card1;
+            document.querySelector(".cost-passive-card1").innerText = Math.floor(300 * (passiveIncome.card1 + 1) ** 2);
+            document.querySelector(".level-passive-card2").innerText = passiveIncome.card2;
+            document.querySelector(".cost-passive-card2").innerText = Math.floor(500 * (passiveIncome.card2 + 1) ** 2);
+            document.querySelector(".level-passive-card3").innerText = passiveIncome.card3;
+            document.querySelector(".cost-passive-card3").innerText = Math.floor(1000 * (passiveIncome.card3 + 1) ** 2);
         }
 
         // Покупка буста
-        function buyBoost(type, cost, updateFn) {
+        function buyBoost(type, path, cost, updateFn) {
             if (balance >= cost) {
                 balance -= cost;
+                localStorage.setItem(balance_${userId}, balance);
                 updateFn();
-                push(ref(db, users/${userId}/boosts/${type}/purchases), {
-                    t: Date.now(),
-                    cost
+                const now = Date.now();
+                push(ref(db, users/${userId}/boosts/${path}/purchases), {
+                    t: now,
+                    cost,
+                    delta_t: lastClickTime ? now - lastClickTime : 0
                 });
                 saveData();
                 updateUI();
@@ -257,22 +393,28 @@
 
         // Привязка кнопок бустов
         document.querySelector(".boost-multiply-per-click").addEventListener("click", () => {
-            buyBoost("multiply_per_click", 100, () => clickPower += 1);
+            const cost = Math.floor(100 * clickPower ** 2);
+            buyBoost("multiply_per_click", "multiply_per_click", cost, () => clickPower += 1);
         });
         document.querySelector(".boost-energy-limit").addEventListener("click", () => {
-            buyBoost("energy_limit", 200, () => maxEnergy += 100);
+            const cost = Math.floor(200 * (maxEnergy / 100) ** 2);
+            buyBoost("energy_limit", "energy_limit", cost, () => maxEnergy += 100);
         });
         document.querySelector(".boost-recharge-energy").addEventListener("click", () => {
-            buyBoost("recharge_energy", 150, () => rechargeRate += 0.5);
+            const cost = Math.floor(150 * rechargeRate ** 2);
+            buyBoost("recharge_energy", "recharge_energy", cost, () => rechargeRate += 0.5);
         });
         document.querySelector(".boost-passive-card1").addEventListener("click", () => {
-            buyBoost("passive_income/card1", 300, () => passiveIncome.card1 += 1);
+            const cost = Math.floor(300 * (passiveIncome.card1 + 1) ** 2);
+            buyBoost("passive_income/card1", "passive_income/card1", cost, () => passiveIncome.card1 += 1);
         });
         document.querySelector(".boost-passive-card2").addEventListener("click", () => {
-            buyBoost("passive_income/card2", 500, () => passiveIncome.card2 += 2);
+            const cost = Math.floor(500 * (passiveIncome.card2 + 1) ** 2);
+            buyBoost("passive_income/card2", "passive_income/card2", cost, () => passiveIncome.card2 += 2);
         });
         document.querySelector(".boost-passive-card3").addEventListener("click", () => {
-            buyBoost("passive_income/card3", 1000, () => passiveIncome.card3 += 5);
+            const cost = Math.floor(1000 * (passiveIncome.card3 + 1) ** 2);
+            buyBoost("passive_income/card3", "passive_income/card3", cost, () => passiveIncome.card3 += 5);
         });
 
         // Приглашение друга
