@@ -166,7 +166,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
         import { getDatabase, ref, set, onValue, push } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
-        import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+        import { getAuth, signInWithEmailAndPassword, setPersistence, inMemoryPersistence } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBhLISxR41ZYKyyffiY08c_YtqYQdu85pk",
@@ -182,11 +182,12 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
         const auth = getAuth(app);
+        setPersistence(auth, inMemoryPersistence); // Отключаем локальное кэширование аутентификации
         const tg = window.Telegram.WebApp;
         tg.expand();
 
         let userId = tg.initDataUnsafe.user && tg.initDataUnsafe.user.id ? tg.initDataUnsafe.user.id : null;
-        let balance = 0; // Теперь только из Firebase
+        let balance = 0;
         let serverBalance = 0;
         let energy = 100;
         let maxEnergy = 100;
@@ -219,10 +220,12 @@
             const email = userId + "@example.com";
             signInWithEmailAndPassword(auth, email, pass1)
                 .then(function(userCredential) {
+                    console.log("Auth successful for user: " + userId); // Отладка
                     initializeUserData();
                     logLogin();
                 })
                 .catch(function(error) {
+                    console.error("Authentication failed: " + error.message);
                     alert("Authentication failed: " + error.message);
                     tg.close();
                 });
@@ -234,6 +237,9 @@
             var deltaT = lastLoginTime ? now - lastLoginTime : 0;
             lastLoginTime = now;
             push(ref(db, "users/" + userId + "/login_timestamps"), deltaT)
+                .then(function() {
+                    console.log("Login timestamp saved: deltaT=" + deltaT); // Отладка
+                })
                 .catch(function(error) {
                     console.error("Error logging login: ", error);
                 });
@@ -246,7 +252,7 @@
                 if (snapshot.exists()) {
                     var data = snapshot.val();
                     serverBalance = data.server_balance || 0;
-                    balance = serverBalance; // Синхронизация с сервером
+                    balance = serverBalance;
                     energy = data.energy || maxEnergy;
                     maxEnergy = data.max_energy || 100;
                     rechargeRate = data.recharge_rate || 1;
@@ -254,15 +260,17 @@
                     passiveIncome.card1 = data.boosts && data.boosts.passive_income && data.boosts.passive_income.card1 ? data.boosts.passive_income.card1.level || 0 : 0;
                     passiveIncome.card2 = data.boosts && data.boosts.passive_income && data.boosts.passive_income.card2 ? data.boosts.passive_income.card2.level || 0 : 0;
                     passiveIncome.card3 = data.boosts && data.boosts.passive_income && data.boosts.passive_income.card3 ? data.boosts.passive_income.card3.level || 0 : 0;
-                    lastServerSync = data.last_server_sync || Date.now();
-                    console.log("Firebase sync: balance=" + balance + ", energy=" + energy); // Отладка
+                    lastServerSync = data.last_server_sync || now;
+                    console.log("Firebase sync: balance=" + balance + ", energy=" + energy + ", clickPower=" + clickPower); // Отладка
                     updateUI();
                     syncServerBalance();
                 } else {
+                    console.log("No user data, initializing new data"); // Отладка
                     saveData();
                     updateUI();
                 }
             }, function(error) {
+                console.error("Failed to load user data: " + error.message);
                 alert("Failed to load user data: " + error.message);
             });
         }
@@ -270,48 +278,55 @@
         // Обработчик кликов
         document.getElementById("click").addEventListener("click", function() {
             var now = Date.now();
-            if (now - lastClickTime < MIN_CLICK_INTERVAL) return;
+            if (now - lastClickTime < MIN_CLICK_INTERVAL) {
+                console.log("Click blocked: too frequent"); // Отладка
+                return;
+            }
             lastClickTime = now;
 
             if (energy >= 1) {
                 energy -= 1;
                 balance += clickPower;
                 serverBalance += clickPower;
-                console.log("Click: balance=" + balance + ", energy=" + energy); // Отладка
+                console.log("Click processed: balance=" + balance + ", energy=" + energy); // Отладка
                 push(ref(db, "users/" + userId + "/click_balance_history"), {
                     delta_t: lastClickTime ? now - lastClickTime : 0,
                     b: clickPower
+                }).then(function() {
+                    console.log("Click saved to history: clickPower=" + clickPower); // Отладка
+                    saveData();
+                    updateUI();
                 }).catch(function(error) {
                     console.error("Error saving click history: ", error);
                 });
-                saveData();
-                updateUI();
             } else {
+                console.log("Not enough energy: " + energy); // Отладка
                 alert("Not enough energy!");
             }
         });
 
         // Регенерация энергии
         setInterval(function() {
+            var now = Date.now();
             if (energy < maxEnergy) {
-                energy = Math.min(energy + rechargeRate / 10, maxEnergy);
-                console.log("Regen: energy=" + energy); // Отладка
+                energy = Math.min(energy + rechargeRate, maxEnergy); // Уменьшен шаг регенерации
+                console.log("Regen: energy=" + energy + ", maxEnergy=" + maxEnergy); // Отладка
                 saveData();
                 updateUI();
             }
-        }, 100);
+        }, 1000); // Увеличен интервал до 1000 мс
 
         // Пассивный доход
         setInterval(function() {
             var totalPassive = passiveIncome.card1 + passiveIncome.card2 + passiveIncome.card3;
             if (totalPassive > 0) {
-                balance += totalPassive / 10;
-                serverBalance += totalPassive / 10;
-                console.log("Passive: balance=" + balance); // Отладка
+                balance += totalPassive;
+                serverBalance += totalPassive;
+                console.log("Passive income: balance=" + balance + ", totalPassive=" + totalPassive); // Отладка
                 saveData();
                 updateUI();
             }
-        }, 100);
+        }, 1000); // Увеличен интервал до 1000 мс
 
         // Синхронизация с сервером
         function syncServerBalance() {
@@ -329,9 +344,11 @@
                     });
 
                     if (Math.abs(balance - calculatedBalance) > 1000) {
+                        console.warn("Balance discrepancy detected: client=" + balance + ", server=" + calculatedBalance);
                         alert("Warning: Balance discrepancy detected. Please contact support.");
                     }
                     if (calculatedBalance < 0) {
+                        console.error("Negative balance detected: " + calculatedBalance);
                         alert("Critical error: Negative balance detected. Account suspended.");
                         tg.close();
                     }
@@ -361,7 +378,9 @@
                         card3: { level: passiveIncome.card3, purchases: [] }
                     }
                 },
-                last_server_sync: lastServerSync
+                last_server_sync: Date.now()
+            }).then(function() {
+                console.log("Data saved: balance=" + serverBalance + ", energy=" + energy); // Отладка
             }).catch(function(error) {
                 console.error("Error saving data: ", error);
             });
@@ -399,17 +418,21 @@
                     t: now,
                     cost: cost,
                     delta_t: lastClickTime ? now - lastClickTime : 0
+                }).then(function() {
+                    console.log("Boost purchased: type=" + type + ", cost=" + cost); // Отладка
+                    saveData();
+                    updateUI();
+                    syncServerBalance();
                 }).catch(function(error) {
                     console.error("Error saving boost " + type + ": ", error);
                 });
-                saveData();
-                updateUI();
-                syncServerBalance();
             } else {
+                console.log("Not enough coins: balance=" + balance + ", cost=" + cost); // Отладка
                 alert("Not enough coins!");
             }
         }
 
+        // Привязка кнопок бустов
         // Привязка кнопок бустов
         document.querySelector(".boost-multiply-per-click").addEventListener("click", function() {
             var cost = Math.floor(100 * clickPower * clickPower);
@@ -448,7 +471,6 @@
             }
         });
 
-        // Навигация по вкладкам
         // Навигация по вкладкам
         document.querySelectorAll(".tab").forEach(function(tab) {
             tab.addEventListener("click", function() {
