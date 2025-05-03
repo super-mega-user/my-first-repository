@@ -186,7 +186,7 @@
         tg.expand();
 
         let userId = tg.initDataUnsafe.user && tg.initDataUnsafe.user.id ? tg.initDataUnsafe.user.id : null;
-        let balance = parseInt(localStorage.getItem("balance_" + userId)) || 0;
+        let balance = parseInt(sessionStorage.getItem("balance_" + userId)) || 0;
         let serverBalance = 0;
         let energy = 100;
         let maxEnergy = 100;
@@ -254,7 +254,8 @@
                     passiveIncome.card2 = data.boosts && data.boosts.passive_income && data.boosts.passive_income.card2 ? data.boosts.passive_income.card2.level || 0 : 0;
                     passiveIncome.card3 = data.boosts && data.boosts.passive_income && data.boosts.passive_income.card3 ? data.boosts.passive_income.card3.level || 0 : 0;
                     lastServerSync = data.last_server_sync || Date.now();
-                    balance = parseInt(localStorage.getItem("balance_" + userId)) || serverBalance;
+                    balance = parseInt(sessionStorage.getItem("balance_" + userId)) || serverBalance;
+                    console.log("Initialized balance: " + balance + ", energy: " + energy); // Отладка
                     updateUI();
                     syncServerBalance();
                 } else {
@@ -276,7 +277,8 @@
                 energy -= 1;
                 balance += clickPower;
                 serverBalance += clickPower;
-                localStorage.setItem("balance_" + userId, balance);
+                sessionStorage.setItem("balance_" + userId, balance);
+                console.log("Click: balance=" + balance + ", energy=" + energy); // Отладка
                 push(ref(db, "users/" + userId + "/click_balance_history"), {
                     delta_t: lastClickTime ? now - lastClickTime : 0,
                     b: clickPower
@@ -294,6 +296,7 @@
         setInterval(function() {
             if (energy < maxEnergy) {
                 energy = Math.min(energy + rechargeRate / 10, maxEnergy);
+                console.log("Regen: energy=" + energy); // Отладка
                 updateUI();
             }
         }, 100);
@@ -303,7 +306,8 @@
             var totalPassive = passiveIncome.card1 + passiveIncome.card2 + passiveIncome.card3;
             if (totalPassive > 0) {
                 balance += totalPassive / 10;
-                localStorage.setItem("balance_" + userId, balance);
+                sessionStorage.setItem("balance_" + userId, balance);
+                console.log("Passive: balance=" + balance); // Отладка
                 updateUI();
             }
         }, 100);
@@ -382,9 +386,10 @@
 
         // Покупка буста
         function buyBoost(type, path, cost, updateFn) {
+            console.log("Buy attempt: balance=" + balance + ", cost=" + cost); // Отладка
             if (balance >= cost) {
                 balance -= cost;
-                localStorage.setItem("balance_" + userId, balance);
+                sessionStorage.setItem("balance_" + userId, balance);
                 updateFn();
                 var now = Date.now();
                 push(ref(db, "users/" + userId + "/boosts/" + path + "/purchases"), {
@@ -440,6 +445,7 @@
             }
         });
 
+        // Навигация по вкладкам
         // Навигация по вкладкам
         document.querySelectorAll(".tab").forEach(function(tab) {
             tab.addEventListener("click", function() {
