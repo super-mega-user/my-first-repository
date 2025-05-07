@@ -199,10 +199,11 @@
         let lastEnergyUpdate = 0;
         let firstClickTime = 0;
         let recentClicks = [];
+        let pendingClicks = 0; // Буфер для кликов
         const MIN_CLICK_INTERVAL = 100;
         const ENERGY_UPDATE_INTERVAL = 1000;
         const MAX_CLICKS_PER_SECOND = 10;
-        const CLICK_SAVE_THRESHOLD = 200;
+        const CLICK_SAVE_THRESHOLD = 500; // Увеличено для оптимизации трафика
         const PASSIVE_INCOME_MAX_HOURS = 6;
 
         // Конфигурация бустов
@@ -269,7 +270,7 @@
         function logLogin() {
             const now = Date.now();
             const loginData = 1;
-            if (typeof loginData !== 'number' || loginData !== 1) {
+            if (typeof loginData !== "number" || loginData !== 1) {
                 console.error("Invalid login data: ", loginData);
                 return;
             }
@@ -308,10 +309,35 @@
                     updateUI();
                 } else {
                     console.log("No user data, initializing new data");
-                    saveData();
+                    await initializeNewUser();
                     updateUI();
                 }
             }, { onlyOnce: true });
+        }
+
+        // Инициализация нового пользователя
+        async function initializeNewUser() {
+            try {
+                await set(ref(db, "users/" + userId), {
+                    server_balance: 0,
+                    energy: 100,
+                    max_energy: 100,
+                    recharge_rate: 1
+                });
+                balance = 0;
+                serverBalance = 0;
+                clickCounter = 0;
+                energy = 100;
+                maxEnergy = 100;
+                rechargeRate = 1;
+                clickPower = 1;
+                passiveIncome = { card1: 0, card2: 0, card3: 0 };
+                localStorage.setItem("balance_" + userId, balance);
+                console.log("New user initialized");
+            } catch (error) {
+                console.error("Error initializing new user: ", error.message);
+                alert("Failed to initialize user: " + error.message);
+            }
         }
 
         // Обработчик кликов
@@ -334,12 +360,13 @@
                 clickCounter += clickPower;
                 serverBalance += clickPower;
                 balance += clickPower;
+                pendingClicks += clickPower;
                 console.log("Click: clickCounter=" + clickCounter + ", serverBalance=" + serverBalance + ", balance=" + balance);
-                if (clickCounter % CLICK_SAVE_THRESHOLD === 0) {
+                if (pendingClicks >= CLICK_SAVE_THRESHOLD) {
                     saveClickHistory(now);
                 }
                 updateUI();
-                saveData();
+                saveEnergy(); // Сохраняем только энергию
             } else {
                 console.log("Not enough energy: " + energy);
                 alert("Not enough energy!");
@@ -355,10 +382,44 @@
             set(ref(db, "users/" + userId + "/click_balance_history/" + timestamp), clickCounter)
                 .then(() => {
                     console.log("Click history saved: t=" + timestamp + ", clickCounter=" + clickCounter);
+                    pendingClicks = 0; // Сбрасываем буфер
+                    saveServerBalance(); // Сохраняем server_balance отдельно
                 })
                 .catch(error => {
                     console.error("Error saving click history: ", error.message);
                     alert("Failed to save click history: " + error.message);
+                });
+        }
+
+        // Сохранение server_balance
+        function saveServerBalance() {
+            if (!Number.isInteger(serverBalance) || serverBalance < 0) {
+                console.error("Invalid server_balance: " + serverBalance);
+                return;
+            }
+            set(ref(db, "users/" + userId + "/server_balance"), serverBalance)
+                .then(() => {
+                    console.log("Server balance saved: " + serverBalance);
+                })
+                .catch(error => {
+                    console.error("Error saving server balance: ", error.message);
+                    alert("Failed to save server balance: " + error.message);
+                });
+        }
+
+        // Сохранение энергии
+        function saveEnergy() {
+            if (!Number.isInteger(energy) || energy < 0) {
+                console.error("Invalid energy: " + energy);
+                return;
+            }
+            set(ref(db, "users/" + userId + "/energy"), energy)
+                .then(() => {
+                    console.log("Energy saved: " + energy);
+                })
+                .catch(error => {
+                    console.error("Error saving energy: ", error.message);
+                    alert("Failed to save energy: " + error.message);
                 });
         }
 
@@ -367,11 +428,12 @@
             const now = Date.now();
             if (now - lastEnergyUpdate < ENERGY_UPDATE_INTERVAL) return;
             if (energy < maxEnergy) {
-                const increase = Math.floor(Math.min(rechargeRate, maxEnergy - energy));
+                const increase = Math.min(rechargeRate, maxEnergy - energy);
                 energy += increase;
                 lastEnergyUpdate = now;
                 console.log("Energy regen: energy=" + energy + ", increase=" + increase);
-                saveData();
+                saveEnergy();
+                updateUI();
             }
         }, ENERGY_UPDATE_INTERVAL);
 
@@ -382,70 +444,22 @@
                                 passiveIncome.card3 * boostConfig.passive_income.card3.income;
             if (totalPassive > 0) {
                 balance += totalPassive;
+                serverBalance += totalPassive;
                 localStorage.setItem("balance_" + userId, balance);
                 console.log("Passive income: balance=" + balance + ", totalPassive=" + totalPassive);
+                saveServerBalance();
                 updateUI();
             }
         }, 1000);
 
-        // Сохранение данных
-        async function saveData() {
-            if (!userId) return;
-            try {
-                const data = {
-                    server_balance: serverBalance,
-                    energy: energy,
-                    max_energy: maxEnergy,
-                    recharge_rate: rechargeRate,
-                    boosts: {
-                        multiply_per_click: buildBoostLevels("multiply_per_click"),
-                        energy_limit: buildBoostLevels("energy_limit"),
-                        recharge_energy: buildBoostLevels("recharge_energy"),
-                        passive_income: {
-                            card1: buildBoostLevels("passive_income/card1"),
-                            card2: buildBoostLevels("passive_income/card2"),
-                            card3: buildBoostLevels("passive_income/card3")
-                        }
-                    }
-                };
-                if (!Number.isInteger(data.server_balance) || data.server_balance < 0 || !Number.isInteger(data.energy) || !Number.isInteger(data.max_energy)) {
-                    console.error("Invalid save data: ", data);
-                    return;
-                }
-                await update(ref(db, "users/" + userId), data);
-                console.log("Data saved: serverBalance=" + serverBalance + ", energy=" + energy);
-            } catch (error) {
-                console.error("Error saving data: ", error.message);
-                alert("Failed to save data: " + error.message);
-            }
-        }
-
-        // Формирование структуры бустов
-        function buildBoostLevels(path) {
-            const levels = {};
-            let count, firstTime = firstClickTime || Date.now();
-            if (path === "multiply_per_click") count = clickPower;
-            else if (path === "energy_limit") count = maxEnergy / 100;
-            else if (path === "recharge_energy") count = rechargeRate;
-            else if (path === "passive_income/card1") count = passiveIncome.card1;
-            else if (path === "passive_income/card2") count = passiveIncome.card2;
-            else if (path === "passive_income/card3") count = passiveIncome.card3;
-            else count = 0;
-
-            for (let i = 1; i <= count; i++) {
-                levels[i] = i === 1 ? firstTime : firstTime + (3600000 * i);
-            }
-            return levels;
-        }
-
         // Расчет реального баланса
-        // Расчет реального баланса
+       // Расчет реального баланса
         async function calculateRealBalance() {
             try {
                 const userRef = ref(db, "users/" + userId);
                 const snapshot = await new Promise(resolve => onValue(userRef, resolve, { onlyOnce: true }));
                 if (!snapshot.exists()) {
-                    console.error("No user data for balance calculation");
+                    console.log("No user data, returning 0 balance");
                     return 0;
                 }
                 const data = snapshot.val();
@@ -536,21 +550,16 @@
                 }
 
                 const realBalance = clickBalance + totalPassiveIncome - totalSpent;
+                if (realBalance < 0) {
+                    console.warn("Negative balance detected: " + realBalance + ", resetting to 0");
+                    return 0; // Предотвращаем отрицательный баланс
+                }
                 console.log("Real balance: clicks=" + clickBalance + ", passive=" + totalPassiveIncome + ", spent=" + totalSpent + ", realBalance=" + realBalance);
                 return realBalance;
             } catch (error) {
                 console.error("Error calculating real balance: ", error.message);
                 return 0;
             }
-        }
-
-        // Функция синхронизации (не используется)
-        async function syncBalance() {
-            const realBalance = await calculateRealBalance();
-            balance = realBalance;
-            localStorage.setItem("balance_" + userId, balance);
-            console.log("Balance synced: balance=" + balance);
-            updateUI();
         }
 
         // Обновление UI
@@ -589,17 +598,17 @@
                         return;
                     }
                     balance -= cost;
+                    serverBalance -= cost;
                     localStorage.setItem("balance_" + userId, balance);
                     updateFn();
                     const now = Date.now();
                     const level = getNextLevel(path);
-                    const timeValue = firstClickTime === 0 ? now : now - firstClickTime;
-                    if (firstClickTime === 0) firstClickTime = now;
-                    set(ref(db, "users/" + userId + "/boosts/" + path + "/" + level), timeValue)
+                    set(ref(db, "users/" + userId + "/boosts/" + path + "/" + level), now)
                         .then(() => {
-                            console.log("Boost purchased: type=" + type + ", level=" + level + ", cost=" + cost + ", time=" + timeValue);
+                            console.log("Boost purchased: type=" + type + ", level=" + level + ", cost=" + cost + ", time=" + now);
                             saveClickHistory(now);
-                            saveData().then(updateUI);
+                            saveServerBalance();
+                            updateUI();
                         })
                         .catch(error => {
                             console.error("Error saving boost " + type + ": ", error.message);
@@ -630,11 +639,17 @@
         });
         document.querySelector(".boost-energy-limit").addEventListener("click", () => {
             const cost = boostConfig.energy_limit.cost(maxEnergy / 100);
-            buyBoost("energy_limit", "energy_limit", cost, () => { maxEnergy += 100; });
+            buyBoost("energy_limit", "energy_limit", cost, () => { 
+                maxEnergy += 100; 
+                set(ref(db, "users/" + userId + "/max_energy"), maxEnergy); 
+            });
         });
         document.querySelector(".boost-recharge-energy").addEventListener("click", () => {
             const cost = boostConfig.recharge_energy.cost(rechargeRate);
-            buyBoost("recharge_energy", "recharge_energy", cost, () => { rechargeRate += 0.5; });
+            buyBoost("recharge_energy", "recharge_energy", cost, () => { 
+                rechargeRate += 0.5; 
+                set(ref(db, "users/" + userId + "/recharge_rate"), rechargeRate); 
+            });
         });
         document.querySelector(".boost-passive-card1").addEventListener("click", () => {
             const cost = boostConfig.passive_income.card1.cost(passiveIncome.card1 + 1);
@@ -662,8 +677,10 @@
         });
 
         // Сохранение кликов при выходе
-        tg.onEvent('mainButtonClicked', () => {
-            saveClickHistory(Date.now());
+        tg.onEvent("mainButtonClicked", () => {
+            if (pendingClicks > 0) {
+                saveClickHistory(Date.now());
+            }
             tg.close();
         });
 
