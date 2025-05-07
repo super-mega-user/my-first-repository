@@ -187,7 +187,7 @@
         tg.expand();
 
         let userId = tg.initDataUnsafe.user && tg.initDataUnsafe.user.id ? tg.initDataUnsafe.user.id : null;
-        let balance = parseFloat(localStorage.getItem(balance_${userId}));
+        let balance = parseFloat(localStorage.getItem("balance_" + userId)) || 0;
         let serverBalance = 0;
         let clickCounter = 0;
         let energy = 100;
