@@ -199,11 +199,11 @@
         let lastEnergyUpdate = 0;
         let firstClickTime = 0;
         let recentClicks = [];
-        let pendingClicks = 0; // Буфер для кликов
+        let pendingClicks = 0;
         const MIN_CLICK_INTERVAL = 100;
         const ENERGY_UPDATE_INTERVAL = 1000;
         const MAX_CLICKS_PER_SECOND = 10;
-        const CLICK_SAVE_THRESHOLD = 500; // Увеличено для оптимизации трафика
+        const CLICK_SAVE_THRESHOLD = 50;
         const PASSIVE_INCOME_MAX_HOURS = 6;
 
         // Конфигурация бустов
@@ -359,14 +359,13 @@
                 energy -= 1;
                 clickCounter += clickPower;
                 serverBalance += clickPower;
-                balance += clickPower;
                 pendingClicks += clickPower;
-                console.log("Click: clickCounter=" + clickCounter + ", serverBalance=" + serverBalance + ", balance=" + balance);
+                console.log("Click: clickCounter=" + clickCounter + ", serverBalance=" + serverBalance + ", pendingClicks=" + pendingClicks);
                 if (pendingClicks >= CLICK_SAVE_THRESHOLD) {
                     saveClickHistory(now);
                 }
                 updateUI();
-                saveEnergy(); // Сохраняем только энергию
+                saveEnergy();
             } else {
                 console.log("Not enough energy: " + energy);
                 alert("Not enough energy!");
@@ -382,8 +381,8 @@
             set(ref(db, "users/" + userId + "/click_balance_history/" + timestamp), clickCounter)
                 .then(() => {
                     console.log("Click history saved: t=" + timestamp + ", clickCounter=" + clickCounter);
-                    pendingClicks = 0; // Сбрасываем буфер
-                    saveServerBalance(); // Сохраняем server_balance отдельно
+                    pendingClicks = 0;
+                    saveServerBalance();
                 })
                 .catch(error => {
                     console.error("Error saving click history: ", error.message);
@@ -444,16 +443,14 @@
                                 passiveIncome.card3 * boostConfig.passive_income.card3.income;
             if (totalPassive > 0) {
                 balance += totalPassive;
-                serverBalance += totalPassive;
                 localStorage.setItem("balance_" + userId, balance);
                 console.log("Passive income: balance=" + balance + ", totalPassive=" + totalPassive);
-                saveServerBalance();
                 updateUI();
             }
         }, 1000);
 
         // Расчет реального баланса
-       // Расчет реального баланса
+        // Расчет реального баланса
         async function calculateRealBalance() {
             try {
                 const userRef = ref(db, "users/" + userId);
@@ -469,6 +466,8 @@
                 if (data.click_balance_history) {
                     const lastKey = Object.keys(data.click_balance_history).sort().pop();
                     clickBalance = data.click_balance_history[lastKey] || 0;
+                } else {
+                    console.log("No click_balance_history, clickBalance=0");
                 }
 
                 // 2. Пассивный доход
@@ -486,6 +485,8 @@
                             });
                         }
                     }
+                } else {
+                    console.log("No passive_income boosts, passiveIncomeEvents empty");
                 }
                 passiveIncomeEvents.sort((a, b) => a.timestamp - b.timestamp);
 
@@ -499,27 +500,31 @@
                 const now = Date.now();
                 const maxSeconds = PASSIVE_INCOME_MAX_HOURS * 3600;
 
-                for (let i = 0; i < loginTimestamps.length; i++) {
-                    const loginTime = loginTimestamps[i];
-                    const nextTime = i + 1 < loginTimestamps.length ? loginTimestamps[i + 1] : now;
-                    let sessionDuration = Math.min((nextTime - loginTime) / 1000, maxSeconds);
+                if (loginTimestamps.length > 0) {
+                    for (let i = 0; i < loginTimestamps.length; i++) {
+                        const loginTime = loginTimestamps[i];
+                        const nextTime = i + 1 < loginTimestamps.length ? loginTimestamps[i + 1] : now;
+                        let sessionDuration = Math.min((nextTime - loginTime) / 1000, maxSeconds);
 
-                    const sessionEvents = passiveIncomeEvents
-                        .filter(e => loginTime <= e.timestamp && e.timestamp <= nextTime)
-                        .concat([{ timestamp: nextTime, rate: 0 }])
-                        .sort((a, b) => a.timestamp - b.timestamp);
+                        const sessionEvents = passiveIncomeEvents
+                            .filter(e => loginTime <= e.timestamp && e.timestamp <= nextTime)
+                            .concat([{ timestamp: nextTime, rate: 0 }])
+                            .sort((a, b) => a.timestamp - b.timestamp);
 
-                    let currentRate = 0;
-                    let lastTime = loginTime;
-                    for (const event of sessionEvents) {
-                        const duration = Math.min((event.timestamp - lastTime) / 1000, sessionDuration);
-                        if (duration > 0) {
-                            totalPassiveIncome += currentRate * duration;
-                            sessionDuration -= duration;
+                        let currentRate = 0;
+                        let lastTime = loginTime;
+                        for (const event of sessionEvents) {
+                            const duration = Math.min((event.timestamp - lastTime) / 1000, sessionDuration);
+                            if (duration > 0) {
+                                totalPassiveIncome += currentRate * duration;
+                                sessionDuration -= duration;
+                            }
+                            currentRate += event.rate;
+                            lastTime = event.timestamp;
                         }
-                        currentRate += event.rate;
-                        lastTime = event.timestamp;
                     }
+                } else {
+                    console.log("No login_history, totalPassiveIncome=0");
                 }
 
                 // 3. Затраты на покупки
@@ -547,12 +552,14 @@
                             }
                         }
                     }
+                } else {
+                    console.log("No boosts, totalSpent=0");
                 }
 
                 const realBalance = clickBalance + totalPassiveIncome - totalSpent;
                 if (realBalance < 0) {
                     console.warn("Negative balance detected: " + realBalance + ", resetting to 0");
-                    return 0; // Предотвращаем отрицательный баланс
+                    return 0;
                 }
                 console.log("Real balance: clicks=" + clickBalance + ", passive=" + totalPassiveIncome + ", spent=" + totalSpent + ", realBalance=" + realBalance);
                 return realBalance;
@@ -573,7 +580,7 @@
             document.querySelector(".level-energy-limit").innerText = maxEnergy / 100;
             document.querySelector(".cost-energy-limit").innerText = boostConfig.energy_limit.cost(maxEnergy / 100);
             document.querySelector(".level-recharge-energy").innerText = rechargeRate;
-            document.querySelector(".cost-recharge-energy").innerText = boostConfig.recharge_energy.cost(rechargeRate);
+            document.querySelector(".cost-recharge_energy").innerText = boostConfig.recharge_energy.cost(rechargeRate);
             document.querySelector(".level-passive-card1").innerText = passiveIncome.card1;
             document.querySelector(".cost-passive-card1").innerText = boostConfig.passive_income.card1.cost(passiveIncome.card1 + 1);
             document.querySelector(".level-passive-card2").innerText = passiveIncome.card2;
@@ -588,7 +595,7 @@
             if (balance >= cost) {
                 onValue(ref(db, "users/" + userId + "/click_balance_history"), snapshot => {
                     let calculatedBalance = 0;
-                    if (snapshot.exists()) {
+ if (snapshot.exists()) {
                         const lastKey = Object.keys(snapshot.val()).sort().pop();
                         calculatedBalance = snapshot.val()[lastKey] || 0;
                     }
@@ -598,7 +605,6 @@
                         return;
                     }
                     balance -= cost;
-                    serverBalance -= cost;
                     localStorage.setItem("balance_" + userId, balance);
                     updateFn();
                     const now = Date.now();
@@ -607,7 +613,6 @@
                         .then(() => {
                             console.log("Boost purchased: type=" + type + ", level=" + level + ", cost=" + cost + ", time=" + now);
                             saveClickHistory(now);
-                            saveServerBalance();
                             updateUI();
                         })
                         .catch(error => {
