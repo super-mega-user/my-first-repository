@@ -164,12 +164,13 @@
     </div>
 
     <script type="module">
+        // Импорт Firebase модулей
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
-        import { getAuth, signInWithEmailAndPassword, setPersistence } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
+        import { getAuth, signInWithEmailAndPassword, setPersistence, inMemoryPersistence } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
         import { getDatabase, ref, set, onValue } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js';
 
-        // Firebase Configuration
-        var firebaseConfig = {
+        // Конфигурация Firebase
+        const firebaseConfig = {
             apiKey: "AIzaSyBhLISxR41ZYKyyffiY08c_YtqYQdu85pk",
             authDomain: "test-b5ec3.firebaseapp.com",
             databaseURL: "https://test-b5ec3-default-rtdb.firebaseio.com",
@@ -180,8 +181,8 @@
             measurementId: "G-YNQM9CV4P3"
         };
 
-        // Game State
-        var gameState = {
+        // Состояние игры
+        const gameState = {
             balance: 0,
             serverBalance: 0,
             clickCounter: 0,
@@ -202,96 +203,87 @@
             PASSIVE_INCOME_MAX_HOURS: 6,
             boostConfig: {
                 multiply_per_click: {
-                    cost: function(level) { return Math.floor(100 * level * level); },
-                    effect: function(level) { return level; }
+                    cost: level => Math.floor(100 * level * level),
+                    effect: level => level
                 },
                 energy_limit: {
-                    cost: function(level) { return Math.floor(200 * level * level); },
-                    effect: function(level) { return level * 100; }
+                    cost: level => Math.floor(200 * level * level),
+                    effect: level => level * 100
                 },
                 recharge_energy: {
-                    cost: function(level) { return Math.floor(150 * level * level); },
-                    effect: function(level) { return level; }
+                    cost: level => Math.floor(150 * level * level),
+                    effect: level => level
                 },
                 passive_income: {
-                    card1: {
-                        cost: function(level) { return Math.floor(300 * level * level); },
-                        income: 1
-                    },
-                    card2: {
-                        cost: function(level) { return Math.floor(500 * level * level); },
-                        income: 2
-                    },
-                    card3: {
-                        cost: function(level) { return Math.floor(1000 * level * level); },
-                        income: 5
-                    }
+                    card1: { cost: level => Math.floor(300 * level * level), income: 1 },
+                    card2: { cost: level => Math.floor(500 * level * level), income: 2 },
+                    card3: { cost: level => Math.floor(1000 * level * level), income: 5 }
                 }
             }
         };
 
-        // Firebase Initialization
-        var app = initializeApp(firebaseConfig);
-        var db = getDatabase(app);
-        var auth = getAuth(app);
+        // Инициализация Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const auth = getAuth(app);
 
-        // App Initialization
+        // Инициализация приложения
         function startApp() {
-            var tg = window.Telegram.WebApp;
+            const tg = window.Telegram.WebApp;
             tg.expand();
 
-            var userId = tg.initDataUnsafe.user && tg.initDataUnsafe.user.id ? tg.initDataUnsafe.user.id : null;
-            var urlParams = new URLSearchParams(window.location.search);
-            var pass1 = urlParams.get("pass1");
+            const userId = tg.initDataUnsafe.user && tg.initDataUnsafe.user.id ? tg.initDataUnsafe.user.id : null;
+            const urlParams = new URLSearchParams(window.location.search);
+            const pass1 = urlParams.get("pass1");
 
             if (!userId || !pass1) {
                 console.error("Missing userId or pass1");
-                alert("Error: Unable to get Telegram user ID or password");
+                alert("Ошибка: Не удалось получить ID пользователя Telegram или пароль");
                 tg.close();
                 return;
             }
-            console.log("App initialized: userId=" + userId);
+            console.log("Приложение инициализировано: userId=" + userId);
 
-            var email = userId + "@example.com";
-            setPersistence(auth, "none")
-                .then(function() { return signInWithEmailAndPassword(auth, email, pass1); })
-                .then(function(userCredential) {
-                    console.log("Auth successful for user: " + userId);
+            const email = userId + "@example.com";
+            setPersistence(auth, inMemoryPersistence)
+                .then(() => signInWithEmailAndPassword(auth, email, pass1))
+                .then(userCredential => {
+                    console.log("Аутентификация успешна для пользователя: " + userId);
                     initializeUserData(userId);
                     logLogin(userId);
                     bindGameEvents(userId);
                     bindUIEvents(userId);
                 })
-                .catch(function(error) {
-                    console.error("Authentication failed: " + error.message);
-                    alert("Authentication failed: " + error.message);
+                .catch(error => {
+                    console.error("Ошибка аутентификации: " + error.message);
+                    alert("Ошибка аутентификации: " + error.message);
                     tg.close();
                 });
         }
 
-        // Firebase Functions
+        // Функции Firebase
         function logLogin(userId) {
-            var now = Date.now();
-            var loginData = 1;
+            const now = Date.now();
+            const loginData = 1;
             if (typeof loginData !== "number" || loginData !== 1) {
-                console.error("Invalid login data: " + loginData);
+                console.error("Неверные данные входа: " + loginData);
                 return;
             }
             set(ref(db, "users/" + userId + "/login_history/" + now), loginData)
-                .then(function() { console.log("Login recorded: t=" + now); })
-                .catch(function(error) {
-                    console.error("Error logging login: " + error.message);
-                    alert("Failed to record login: " + error.message);
+                .then(() => console.log("Вход записан: t=" + now))
+                .catch(error => {
+                    console.error("Ошибка записи входа: " + error.message);
+                    alert("Не удалось записать вход: " + error.message);
                 });
         }
 
         function initializeUserData(userId) {
-            var userRef = ref(db, "users/" + userId);
+            const userRef = ref(db, "users/" + userId);
             try {
-                onValue(userRef, function(snapshot) {
+                onValue(userRef, snapshot => {
                     if (snapshot.exists()) {
-                        var data = snapshot.val();
-                        console.log("User data loaded: " + JSON.stringify(data));
+                        const data = snapshot.val();
+                        console.log("Данные пользователя загружены: " + JSON.stringify(data));
                         gameState.serverBalance = data.server_balance || 0;
                         gameState.clickCounter = gameState.serverBalance;
                         gameState.energy = Math.floor(data.energy || 100);
@@ -304,20 +296,20 @@
                         if (data.click_balance_history && Object.keys(data.click_balance_history).length > 0) {
                             gameState.firstClickTime = parseInt(Object.keys(data.click_balance_history)[0]) || 0;
                         }
-                        calculateRealBalance(userId, data).then(function(balance) {
+                        calculateRealBalance(userId, data).then(balance => {
                             gameState.balance = balance;
                             localStorage.setItem("balance_" + userId, gameState.balance);
                             console.log("Firebase init: serverBalance=" + gameState.serverBalance + ", balance=" + gameState.balance);
                             updateUI();
                         });
                     } else {
-                        console.log("No user data, initializing new data");
+                        console.log("Нет данных пользователя, инициализация новых данных");
                         set(ref(db, "users/" + userId), {
                             server_balance: 0,
                             energy: 100,
                             max_energy: 100,
                             recharge_rate: 1
-                        }).then(function() {
+                        }).then(() => {
                             gameState.balance = 0;
                             gameState.serverBalance = 0;
                             gameState.clickCounter = 0;
@@ -327,95 +319,94 @@
                             gameState.clickPower = 1;
                             gameState.passiveIncome = { card1: 0, card2: 0, card3: 0 };
                             localStorage.setItem("balance_" + userId, gameState.balance);
-                            console.log("New user initialized: balance=0, serverBalance=0");
+                            console.log("Новый пользователь инициализирован: balance=0, serverBalance=0");
                             updateUI();
-                        }).catch(function(error) {
-                            console.error("Error initializing new user: " + error.message);
-                            alert("Failed to initialize user: " + error.message);
+                        }).catch(error => {
+                            console.error("Ошибка инициализации нового пользователя: " + error.message);
+                            alert("Не удалось инициализировать пользователя: " + error.message);
                         });
                     }
                 }, { onlyOnce: true });
             } catch (error) {
-                console.error("Error initializing user data: " + error.message);
-                alert("Failed to initialize user data: " + error.message);
+                console.error("Ошибка инициализации данных пользователя: " + error.message);
+                alert("Не удалось инициализировать данные пользователя: " + error.message);
             }
         }
 
         function saveClickHistory(userId, timestamp, clickCounter) {
             if (!timestamp || !Number.isInteger(timestamp) || !Number.isInteger(clickCounter) || clickCounter < 0) {
-                console.error("Invalid click history data: t=" + timestamp + ", clickCounter=" + clickCounter);
+                console.error("Неверные данные истории кликов: t=" + timestamp + ", clickCounter=" + clickCounter);
                 return;
             }
             set(ref(db, "users/" + userId + "/click_balance_history/" + timestamp), clickCounter)
-                .then(function() {
-                    console.log("Click history saved: t=" + timestamp + ", clickCounter=" + clickCounter);
+                .then(() => {
+                    console.log("История кликов сохранена: t=" + timestamp + ", clickCounter=" + clickCounter);
                     gameState.pendingClicks = 0;
                     saveServerBalance(userId);
                 })
-                .catch(function(error) {
-                    console.error("Error saving click history: " + error.message);
-                    alert("Failed to save click history: " + error.message);
+                .catch(error => {
+                    console.error("Ошибка сохранения истории кликов: " + error.message);
+                    alert("Не удалось сохранить историю кликов: " + error.message);
                 });
         }
 
         function saveServerBalance(userId) {
             if (!Number.isInteger(gameState.serverBalance) || gameState.serverBalance < 0) {
-                console.error("Invalid server_balance: " + gameState.serverBalance);
+                console.error("Неверный server_balance: " + gameState.serverBalance);
                 return;
             }
             set(ref(db, "users/" + userId + "/server_balance"), gameState.serverBalance)
-                .then(function() { console.log("Server balance saved: " + gameState.serverBalance); })
-                .catch(function(error) {
-                    console.error("Error saving server balance: " + error.message);
-                    alert("Failed to save server balance: " + error.message);
+                .then(() => console.log("Серверный баланс сохранён: " + gameState.serverBalance))
+                .catch(error => {
+                    console.error("Ошибка сохранения серверного баланса: " + error.message);
+                    alert("Не удалось сохранить серверный баланс: " + error.message);
                 });
         }
 
         function saveEnergy(userId) {
             if (!Number.isInteger(gameState.energy) || gameState.energy < 0) {
-                console.error("Invalid energy: " + gameState.energy);
+                console.error("Неверная энергия: " + gameState.energy);
                 return;
             }
             set(ref(db, "users/" + userId + "/energy"), gameState.energy)
-                .then(function() { console.log("Energy saved: " + gameState.energy); })
-                .catch(function(error) {
-                    console.error("Error saving energy: " + error.message);
-                    alert("Failed to save energy: " + error.message);
+                .then(() => console.log("Энергия сохранена: " + gameState.energy))
+                .catch(error => {
+                    console.error("Ошибка сохранения энергии: " + error.message);
+                    alert("Не удалось сохранить энергию: " + error.message);
                 });
         }
 
         function saveBoost(userId, path, level, timestamp) {
             set(ref(db, "users/" + userId + "/boosts/" + path + "/" + level), timestamp)
-                .then(function() { console.log("Boost saved: path=" + path + ", level=" + level + ", timestamp=" + timestamp); })
-                .catch(function(error) {
-                    console.error("Error saving boost: " + error.message);
-                    alert("Failed to save boost: " + error.message);
+                .then(() => console.log("Буст сохранён: path=" + path + ", level=" + level + ", timestamp=" + timestamp))
+                .catch(error => {
+                    console.error("Ошибка сохранения буста: " + error.message);
+                    alert("Не удалось сохранить буст: " + error.message);
                 });
         }
 
-      function calculateRealBalance(userId, data) {
-            return new Promise(function(resolve) {
+        function calculateRealBalance(userId, data) {
+            return new Promise(resolve => {
                 try {
-                    console.log("Calculating balance for user: " + userId);
+                    console.log("Расчёт баланса для пользователя: " + userId);
 
-                    var clickBalance = 0;
+                    let clickBalance = 0;
                     if (data.click_balance_history && Object.keys(data.click_balance_history).length > 0) {
-                        var lastKey = Object.keys(data.click_balance_history).sort(function(a, b) { return b - a; })[0];
+                        const lastKey = Object.keys(data.click_balance_history).sort((a, b) => b - a)[0];
                         clickBalance = data.click_balance_history[lastKey] || 0;
                         console.log("clickBalance=" + clickBalance + ", lastKey=" + lastKey);
                     } else {
-                        console.log("No click_balance_history, clickBalance=0");
+                        console.log("Нет click_balance_history, clickBalance=0");
                     }
 
-                    var passiveIncomeEvents = {};
-                    var boostConfig = gameState.boostConfig;
+                    const passiveIncomeEvents = {};
+                    const boostConfig = gameState.boostConfig;
                     if (data.boosts && data.boosts.passive_income) {
-                        var cards = ["card1", "card2", "card3"];
-                        for (var i = 0; i < cards.length; i++) {
-                            var card = cards[i];
+                        const cards = ["card1", "card2", "card3"];
+                        for (const card of cards) {
                             if (data.boosts.passive_income[card]) {
-                                for (var level in data.boosts.passive_income[card]) {
-                                    var timestamp = data.boosts.passive_income[card][level];
+                                for (const level in data.boosts.passive_income[card]) {
+                                    const timestamp = data.boosts.passive_income[card][level];
                                     if (timestamp && Number.isInteger(timestamp)) {
                                         passiveIncomeEvents[card + "_" + level] = {
                                             timestamp: timestamp,
@@ -425,42 +416,41 @@
                                 }
                             }
                         }
-                        console.log("Passive income events: " + JSON.stringify(passiveIncomeEvents));
+                        console.log("События пассивного дохода: " + JSON.stringify(passiveIncomeEvents));
                     } else {
-                        console.log("No passive_income boosts, passiveIncomeEvents empty");
+                        console.log("Нет бустов пассивного дохода, passiveIncomeEvents пуст");
                     }
 
-                    var totalPassiveIncome = 0;
-                    var loginTimestamps = data.login_history && Object.keys(data.login_history).length > 0
+                    let totalPassiveIncome = 0;
+                    const loginTimestamps = data.login_history && Object.keys(data.login_history).length > 0
                         ? Object.keys(data.login_history)
-                              .filter(function(t) { return data.login_history[t] === 1; })
+                              .filter(t => data.login_history[t] === 1)
                               .map(Number)
-                              .sort(function(a, b) { return a - b; })
+                              .sort((a, b) => a - b)
                         : [];
-                    var now = Date.now();
-                    var maxSeconds = gameState.PASSIVE_INCOME_MAX_HOURS * 3600;
+                    const now = Date.now();
+                    const maxSeconds = gameState.PASSIVE_INCOME_MAX_HOURS * 3600;
 
                     if (loginTimestamps.length > 0) {
-                        for (var i = 0; i < loginTimestamps.length; i++) {
-                            var loginTime = loginTimestamps[i];
-                            var nextTime = i + 1 < loginTimestamps.length ? loginTimestamps[i + 1] : now;
-                            var sessionDuration = Math.min((nextTime - loginTime) / 1000, maxSeconds);
+                        for (let i = 0; i < loginTimestamps.length; i++) {
+                            const loginTime = loginTimestamps[i];
+                            const nextTime = i + 1 < loginTimestamps.length ? loginTimestamps[i + 1] : now;
+                            let sessionDuration = Math.min((nextTime - loginTime) / 1000, maxSeconds);
 
-                            var sessionEvents = [];
-                            for (var key in passiveIncomeEvents) {
-                                var e = passiveIncomeEvents[key];
+                            const sessionEvents = [];
+                            for (const key in passiveIncomeEvents) {
+                                const e = passiveIncomeEvents[key];
                                 if (loginTime <= e.timestamp && e.timestamp <= nextTime) {
                                     sessionEvents.push(e);
                                 }
                             }
                             sessionEvents.push({ timestamp: nextTime, rate: 0 });
-                            sessionEvents.sort(function(a, b) { return a.timestamp - b.timestamp; });
+                            sessionEvents.sort((a, b) => a.timestamp - b.timestamp);
 
-                            var currentRate = 0;
-                            var lastTime = loginTime;
-                            for (var j = 0; j < sessionEvents.length; j++) {
-                                var event = sessionEvents[j];
-                                var duration = Math.min((event.timestamp - lastTime) / 1000, sessionDuration);
+                            let currentRate = 0;
+                            let lastTime = loginTime;
+                            for (const event of sessionEvents) {
+                                const duration = Math.min((event.timestamp - lastTime) / 1000, sessionDuration);
                                 if (duration > 0) {
                                     totalPassiveIncome += currentRate * duration;
                                     sessionDuration -= duration;
@@ -471,17 +461,16 @@
                         }
                         console.log("totalPassiveIncome=" + totalPassiveIncome);
                     } else {
-                        console.log("No login_history, totalPassiveIncome=0");
+                        console.log("Нет login_history, totalPassiveIncome=0");
                     }
 
-                    var totalSpent = 0;
+                    let totalSpent = 0;
                     if (data.boosts) {
-                        var boostTypes = ["multiply_per_click", "energy_limit", "recharge_energy"];
-                        for (var i = 0; i < boostTypes.length; i++) {
-                            var boostType = boostTypes[i];
+                        const boostTypes = ["multiply_per_click", "energy_limit", "recharge_energy"];
+                        for (const boostType of boostTypes) {
                             if (data.boosts[boostType]) {
-                                for (var level in data.boosts[boostType]) {
-                                    var lvl = parseInt(level);
+                                for (const level in data.boosts[boostType]) {
+                                    const lvl = parseInt(level);
                                     if (lvl > 0) {
                                         totalSpent += boostConfig[boostType].cost(lvl);
                                     }
@@ -489,12 +478,11 @@
                             }
                         }
                         if (data.boosts.passive_income) {
-                            var cards = ["card1", "card2", "card3"];
-                            for (var i = 0; i < cards.length; i++) {
-                                var card = cards[i];
+                            const cards = ["card1", "card2", "card3"];
+                            for (const card of cards) {
                                 if (data.boosts.passive_income[card]) {
-                                    for (var level in data.boosts.passive_income[card]) {
-                                        var lvl = parseInt(level);
+                                    for (const level in data.boosts.passive_income[card]) {
+                                        const lvl = parseInt(level);
                                         if (lvl > 0) {
                                             totalSpent += boostConfig.passive_income[card].cost(lvl);
                                         }
@@ -504,51 +492,51 @@
                         }
                         console.log("totalSpent=" + totalSpent);
                     } else {
-                        console.log("No boosts, totalSpent=0");
+                        console.log("Нет бустов, totalSpent=0");
                     }
 
-                    var realBalance = clickBalance + totalPassiveIncome - totalSpent;
+                    const realBalance = clickBalance + totalPassiveIncome - totalSpent;
                     if (realBalance < 0) {
-                        console.warn("Negative balance detected: " + realBalance + ", resetting to 0");
+                        console.warn("Обнаружен отрицательный баланс: " + realBalance + ", сброс до 0");
                         resolve(0);
                     } else {
-                        console.log("Real balance calculated: clicks=" + clickBalance + ", passive=" + totalPassiveIncome + ", spent=" + totalSpent + ", realBalance=" + realBalance);
+                        console.log("Реальный баланс рассчитан: clicks=" + clickBalance + ", passive=" + totalPassiveIncome + ", spent=" + totalSpent + ", realBalance=" + realBalance);
                         resolve(realBalance);
                     }
                 } catch (error) {
-                    console.error("Error calculating real balance: " + error.message);
+                    console.error("Ошибка расчёта реального баланса: " + error.message);
                     resolve(0);
                 }
             });
         }
 
-        // Game Functions
+        // Игровые функции
         function bindGameEvents(userId) {
-            var clickButton = document.getElementById("click");
+            const clickButton = document.getElementById("click");
             if (clickButton) {
-                clickButton.addEventListener("click", function() { handleClick(userId); });
+                clickButton.addEventListener("click", () => handleClick(userId));
             } else {
-                console.error("Click button not found");
+                console.error("Кнопка клика не найдена");
             }
 
-            setInterval(function() { regenerateEnergy(userId); }, gameState.ENERGY_UPDATE_INTERVAL);
-            setInterval(function() { applyPassiveIncome(userId); }, 1000);
+            setInterval(() => regenerateEnergy(userId), gameState.ENERGY_UPDATE_INTERVAL);
+            setInterval(() => applyPassiveIncome(userId), 1000);
             bindBoostButtons(userId);
         }
 
         function handleClick(userId) {
-            var now = Date.now();
+            const now = Date.now();
             if (now - gameState.lastClickTime < gameState.MIN_CLICK_INTERVAL) {
-                console.log("Click blocked: too frequent");
+                console.log("Клик заблокирован: слишком частый");
                 return;
             }
-            var clickCount = 0;
-            for (var t in gameState.recentClicks) {
+            let clickCount = 0;
+            for (const t in gameState.recentClicks) {
                 if (now - parseInt(t) < 1000) clickCount++;
             }
             if (clickCount >= gameState.MAX_CLICKS_PER_SECOND) {
-                console.error("Too many clicks: " + clickCount);
-                alert("Too many clicks. Please slow down.");
+                console.error("Слишком много кликов: " + clickCount);
+                alert("Слишком много кликов. Пожалуйста, замедлите.");
                 return;
             }
             gameState.recentClicks[now] = true;
@@ -560,59 +548,59 @@
                 gameState.pendingClicks += gameState.clickPower;
                 gameState.balance += gameState.clickPower;
                 localStorage.setItem("balance_" + userId, gameState.balance);
-                console.log("Click: clickCounter=" + gameState.clickCounter + ", serverBalance=" + gameState.serverBalance + ", pendingClicks=" + gameState.pendingClicks + ", balance=" + gameState.balance);
+                console.log("Клик: clickCounter=" + gameState.clickCounter + ", serverBalance=" + gameState.serverBalance + ", pendingClicks=" + gameState.pendingClicks + ", balance=" + gameState.balance);
                 if (gameState.pendingClicks >= gameState.CLICK_SAVE_THRESHOLD) {
                     saveClickHistory(userId, now, gameState.clickCounter);
                 }
                 saveEnergy(userId);
                 updateUI();
             } else {
-                console.log("Not enough energy: " + gameState.energy);
-                alert("Not enough energy!");
+                console.log("Недостаточно энергии: " + gameState.energy);
+                alert("Недостаточно энергии!");
             }
         }
 
         function regenerateEnergy(userId) {
-            var now = Date.now();
+            const now = Date.now();
             if (now - gameState.lastEnergyUpdate < gameState.ENERGY_UPDATE_INTERVAL) return;
             if (gameState.energy < gameState.maxEnergy) {
-                var increase = Math.min(gameState.rechargeRate, gameState.maxEnergy - gameState.energy);
+                const increase = Math.min(gameState.rechargeRate, gameState.maxEnergy - gameState.energy);
                 gameState.energy += increase;
                 gameState.lastEnergyUpdate = now;
-                console.log("Energy regen: energy=" + gameState.energy + ", increase=" + increase);
+                console.log("Регенерация энергии: energy=" + gameState.energy + ", increase=" + increase);
                 saveEnergy(userId);
                 updateUI();
             }
         }
 
         function applyPassiveIncome(userId) {
-            var totalPassive = gameState.passiveIncome.card1 * gameState.boostConfig.passive_income.card1.income +
-                              gameState.passiveIncome.card2 * gameState.boostConfig.passive_income.card2.income +
-                              gameState.passiveIncome.card3 * gameState.boostConfig.passive_income.card3.income;
+            const totalPassive = gameState.passiveIncome.card1 * gameState.boostConfig.passive_income.card1.income +
+                                gameState.passiveIncome.card2 * gameState.boostConfig.passive_income.card2.income +
+                                gameState.passiveIncome.card3 * gameState.boostConfig.passive_income.card3.income;
             if (totalPassive > 0) {
                 gameState.balance += totalPassive;
                 localStorage.setItem("balance_" + userId, gameState.balance);
-                console.log("Passive income: balance=" + gameState.balance + ", totalPassive=" + totalPassive);
+                console.log("Пассивный доход: balance=" + gameState.balance + ", totalPassive=" + totalPassive);
                 updateUI();
             }
         }
 
         function buyBoost(userId, type, path, cost, updateFn) {
-            console.log("Buy attempt: type=" + type + ", balance=" + gameState.balance + ", serverBalance=" + gameState.serverBalance + ", cost=" + cost);
+            console.log("Попытка покупки: type=" + type + ", balance=" + gameState.balance + ", serverBalance=" + gameState.serverBalance + ", cost=" + cost);
             if (gameState.balance >= cost && gameState.serverBalance >= cost) {
                 gameState.balance -= cost;
                 gameState.serverBalance -= cost;
                 localStorage.setItem("balance_" + userId, gameState.balance);
                 updateFn();
-                var now = Date.now();
-                var level = getNextLevel(path);
+                const now = Date.now();
+                const level = getNextLevel(path);
                 saveBoost(userId, path, level, now);
                 saveServerBalance(userId);
                 updateUI();
-                console.log("Boost purchased: type=" + type + ", level=" + level + ", cost=" + cost + ", timestamp=" + now);
+                console.log("Буст куплен: type=" + type + ", level=" + level + ", cost=" + cost + ", timestamp=" + now);
             } else {
-                console.log("Not enough coins: balance=" + gameState.balance + ", serverBalance=" + gameState.serverBalance + ", cost=" + cost);
-                alert("Not enough coins!");
+                console.log("Недостаточно монет: balance=" + gameState.balance + ", serverBalance=" + gameState.serverBalance + ", cost=" + cost);
+                alert("Недостаточно монет!");
             }
         }
 
@@ -627,55 +615,54 @@
         }
 
         function bindBoostButtons(userId) {
-            var buttons = {
-                ".boost-multiply-per-click": { type: "multiply_per_click", path: "multiply_per_click", updateFn: function() { gameState.clickPower += 1; } },
-                ".boost-energy-limit": { type: "energy_limit", path: "energy_limit", updateFn: function() { 
+            const buttons = {
+                ".boost-multiply-per-click": { type: "multiply_per_click", path: "multiply_per_click", updateFn: () => { gameState.clickPower += 1; } },
+                ".boost-energy-limit": { type: "energy_limit", path: "energy_limit", updateFn: () => { 
                     gameState.maxEnergy += 100; 
                     set(ref(db, "users/" + userId + "/max_energy"), gameState.maxEnergy); 
                 } },
-                ".boost-recharge-energy": { type: "recharge_energy", path: "recharge_energy", updateFn: function() { 
+                ".boost-recharge-energy": { type: "recharge_energy", path: "recharge_energy", updateFn: () => { 
                     gameState.rechargeRate += 0.5; 
                     set(ref(db, "users/" + userId + "/recharge_rate"), gameState.rechargeRate); 
                 } },
-                ".boost-passive-card1": { type: "passive_income/card1", path: "passive_income/card1", updateFn: function() { gameState.passiveIncome.card1 += 1; } },
-                ".boost-passive-card2": { type: "passive_income/card2", path: "passive_income/card2", updateFn: function() { gameState.passiveIncome.card2 += 1; } },
-                ".boost-passive-card3": { type: "passive_income/card3", path: "passive_income/card3", updateFn: function() { gameState.passiveIncome.card3 += 1; } }
+                ".boost-passive-card1": { type: "passive_income/card1", path: "passive_income/card1", updateFn: () => { gameState.passiveIncome.card1 += 1; } },
+                ".boost-passive-card2": { type: "passive_income/card2", path: "passive_income/card2", updateFn: () => { gameState.passiveIncome.card2 += 1; } },
+                ".boost-passive-card3": { type: "passive_income/card3", path: "passive_income/card3", updateFn: () => { gameState.passiveIncome.card3 += 1; } }
             };
 
-            for (var selector in buttons) {
-                var button = document.querySelector(selector);
+            for (const selector in buttons) {
+                const button = document.querySelector(selector);
                 if (button) {
-                    (function(btn, type, path, updateFn) {
-                        btn.addEventListener("click", function() {
-                            var cost = type.indexOf("passive_income") === 0 
-                                ? gameState.boostConfig.passive_income[type.split("/")[1]].cost(getNextLevel(path))
-                                : gameState.boostConfig[type].cost(getNextLevel(path));
-                            buyBoost(userId, type, path, cost, updateFn);
-                        });
-                    })(button, buttons[selector].type, buttons[selector].path, buttons[selector].updateFn);
+                    button.addEventListener("click", () => {
+                        const { type, path, updateFn } = buttons[selector];
+                        const cost = type.includes("passive_income") 
+                            ? gameState.boostConfig.passive_income[type.split("/")[1]].cost(getNextLevel(path))
+                            : gameState.boostConfig[type].cost(getNextLevel(path));
+                        buyBoost(userId, type, path, cost, updateFn);
+                    });
                 } else {
-                    console.error("Boost button " + selector + " not found");
+                    console.error("Кнопка буста " + selector + " не найдена");
                 }
             }
         }
 
-        // UI Functions
+        // Функции интерфейса
         function updateUI() {
             try {
-                var balanceEl = document.getElementById("balance");
-                var energyEl = document.getElementById("energy");
-                var energyFillEl = document.getElementById("energy-fill");
+                const balanceEl = document.getElementById("balance");
+                const energyEl = document.getElementById("energy");
+                const energyFillEl = document.getElementById("energy-fill");
 
                 if (balanceEl) balanceEl.innerText = Math.floor(gameState.balance);
-                else console.error("Element #balance not found");
+                else console.error("Элемент #balance не найден");
 
                 if (energyEl) energyEl.innerText = "Energy: " + gameState.energy + "/" + gameState.maxEnergy;
-                else console.error("Element #energy not found");
+                else console.error("Элемент #energy не найден");
 
                 if (energyFillEl) energyFillEl.style.width = ((gameState.energy / gameState.maxEnergy) * 100) + "%";
-                else console.error("Element #energy-fill not found");
+                else console.error("Элемент #energy-fill не найден");
 
-                var uiElements = {
+                const uiElements = {
                     ".level-multiply-per-click": gameState.clickPower,
                     ".cost-multiply-per-click": gameState.boostConfig.multiply_per_click.cost(gameState.clickPower),
                     ".level-energy-limit": gameState.maxEnergy / 100,
@@ -690,63 +677,61 @@
                     ".cost-passive-card3": gameState.boostConfig.passive_income.card3.cost(gameState.passiveIncome.card3 + 1)
                 };
 
-                for (var selector in uiElements) {
-                    var el = document.querySelector(selector);
+                for (const selector in uiElements) {
+                    const el = document.querySelector(selector);
                     if (el) el.innerText = uiElements[selector];
-                    else console.error("Element " + selector + " not found");
+                    else console.error("Элемент " + selector + " не найден");
                 }
 
-                console.log("UI updated: balance=" + gameState.balance + ", energy=" + gameState.energy + "/" + gameState.maxEnergy);
+                console.log("UI обновлён: balance=" + gameState.balance + ", energy=" + gameState.energy + "/" + gameState.maxEnergy);
             } catch (error) {
-                console.error("Error updating UI: " + error.message);
+                console.error("Ошибка обновления UI: " + error.message);
             }
         }
 
         function bindUIEvents(userId) {
-            var tabs = document.querySelectorAll(".tab");
-            for (var i = 0; i < tabs.length; i++) {
-                tabs[i].addEventListener("click", function() {
-                    var tabIndex = parseInt(this.getAttribute("data-tab"));
-                    var contents = document.querySelectorAll(".content");
-                    for (var j = 0; j < contents.length; j++) {
-                        contents[j].style.display = j === tabIndex - 1 ? "block" : "none";
-                    }
-                    var allTabs = document.querySelectorAll(".tab");
-                    for (var k = 0; k < allTabs.length; k++) {
-                        allTabs[k].classList.toggle("active", k === tabIndex - 1);
-                    }
-                    console.log("Switched to tab: " + tabIndex);
+            const tabs = document.querySelectorAll(".tab");
+            tabs.forEach((tab, index) => {
+                tab.addEventListener("click", () => {
+                    const tabIndex = parseInt(tab.getAttribute("data-tab"));
+                    document.querySelectorAll(".content").forEach((content, i) => {
+                        content.style.display = i === tabIndex - 1 ? "block" : "none";
+                    });
+                    document.querySelectorAll(".tab").forEach((t, i) => {
+                        t.classList.toggle("active", i === tabIndex - 1);
+                    });
+                    console.log("Переключено на вкладку: " + tabIndex);
                     updateUI();
                 });
-            }
+            });
 
-            var inviteButton = document.querySelector(".invite-friend");
+            const inviteButton = document.querySelector(".invite-friend");
             if (inviteButton) {
-                inviteButton.addEventListener("click", function() {
+                inviteButton.addEventListener("click", () => {
                     try {
-                        var inviteLink = "https://t.me/your_bot?start=" + encodeURIComponent(userId);
-                        var shareUrl = "https://t.me/share/url?url=" + encodeURIComponent(inviteLink) + "&text=" + encodeURIComponent("Join my game!");
+                        const inviteLink = "https://t.me/your_bot?start=" + encodeURIComponent(userId);
+                        const shareUrl = "https://t.me/share/url?url=" + encodeURIComponent(inviteLink) + "&text=" + encodeURIComponent("Присоединяйся к моей игре!");
                         window.Telegram.WebApp.openTelegramLink(shareUrl);
-                        console.log("Invite link generated: " + inviteLink);
+                        console.log("Ссылка для приглашения сгенерирована: " + inviteLink);
                     } catch (error) {
-                        console.error("Error generating invite link: " + error.message);
-                        alert("Failed to generate invite link. Please try again.");
+                        console.error("Ошибка генерации ссылки для приглашения: " + error.message);
+                        alert("Не удалось сгенерировать ссылку для приглашения. Попробуйте снова.");
                     }
                 });
             } else {
-                console.error("Invite button not found");
+                console.error("Кнопка приглашения не найдена");
             }
 
-            window.Telegram.WebApp.onEvent("mainButtonClicked", function() {
+            window.Telegram.WebApp.onEvent("mainButtonClicked", () => {
                 if (gameState.pendingClicks > 0) {
                     saveClickHistory(userId, Date.now(), gameState.clickCounter);
                 }
-                console.log("App closing, pendingClicks=" + gameState.pendingClicks);
+                console.log("Приложение закрывается, pendingClicks=" + gameState.pendingClicks);
                 window.Telegram.WebApp.close();
             });
         }
 
-        // Start the app
+        // Запуск приложения
         startApp();
     </script>
 </body>
