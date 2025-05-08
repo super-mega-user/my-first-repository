@@ -165,7 +165,7 @@
 
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
-        import { getAuth, signInWithEmailAndPassword, setPersistence, AuthCredential } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
+        import { getAuth, signInWithEmailAndPassword, setPersistence } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
         import { getDatabase, ref, set, onValue } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js';
 
         // Firebase Configuration
@@ -236,7 +236,7 @@
         var auth = getAuth(app);
 
         // App Initialization
-        function initializeApp() {
+        function startApp() {
             var tg = window.Telegram.WebApp;
             tg.expand();
 
@@ -747,7 +747,7 @@
         }
 
         // Start the app
-        initializeApp();
+        startApp();
     </script>
 </body>
 </html>
