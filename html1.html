@@ -166,7 +166,7 @@
     <script type="module">
         // Импорт Firebase модулей
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
-        import { getAuth, signInWithEmailAndPassword, setPersistence, inMemoryPersistence } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
+        import { getAuth, signInWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
         import { getDatabase, ref, set, onValue } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js';
 
         // Конфигурация Firebase
@@ -232,31 +232,46 @@
             const tg = window.Telegram.WebApp;
             tg.expand();
 
-            const userId = tg.initDataUnsafe.user && tg.initDataUnsafe.user.id ? tg.initDataUnsafe.user.id : null;
+            const userId = tg.initDataUnsafe.user && tg.initDataUnsafe.user.id ? tg.initDataUnsafe.user.id.toString() : null;
             const urlParams = new URLSearchParams(window.location.search);
             const pass1 = urlParams.get("pass1");
 
-            if (!userId || !pass1) {
-                console.error("Missing userId or pass1");
-                alert("Ошибка: Не удалось получить ID пользователя Telegram или пароль");
+            if (!userId) {
+                console.error("Ошибка: Не удалось получить ID пользователя Telegram");
+                alert("Ошибка: Не удалось получить ID пользователя Telegram. Пожалуйста, попробуйте снова.");
                 tg.close();
                 return;
             }
-            console.log("Приложение инициализировано: userId=" + userId);
+            if (!pass1 || pass1.length < 6 || pass1.trim() !== pass1) {
+                console.error("Ошибка: Пароль (pass1) отсутствует, короче 6 символов или содержит пробелы: " + pass1);
+                alert("Ошибка: Пароль отсутствует, слишком короткий (нужно минимум 6 символов) или содержит пробелы. Проверьте параметр pass1 в URL.");
+                tg.close();
+                return;
+            }
+            console.log("Приложение инициализировано: userId=" + userId + ", pass1=" + pass1);
 
             const email = userId + "@example.com";
-            setPersistence(auth, inMemoryPersistence)
-                .then(() => signInWithEmailAndPassword(auth, email, pass1))
+            console.log("Попытка входа с email: " + email);
+            signInWithEmailAndPassword(auth, email, pass1)
                 .then(userCredential => {
-                    console.log("Аутентификация успешна для пользователя: " + userId);
+                    console.log("Аутентификация успешна для пользователя: " + userId + ", uid: " + userCredential.user.uid);
                     initializeUserData(userId);
                     logLogin(userId);
                     bindGameEvents(userId);
                     bindUIEvents(userId);
                 })
                 .catch(error => {
-                    console.error("Ошибка аутентификации: " + error.message);
-                    alert("Ошибка аутентификации: " + error.message);
+                    console.error("Ошибка входа: " + error.code + " - " + error.message);
+                    if (error.code === "auth/wrong-password") {
+                        console.error("Неверный пароль для пользователя: " + email);
+                        alert("Ошибка: Неверный пароль. Проверьте параметр pass1 в URL или сбросьте пароль в Firebase Console.");
+                    } else if (error.code === "auth/user-not-found") {
+                        console.error("Пользователь не найден: " + email);
+                        alert("Ошибка: Пользователь не найден. Убедитесь, что пользователь зарегистрирован ботом в Firebase.");
+                    } else {
+                        console.error("Неизвестная ошибка аутентификации: " + error.message);
+                        alert("Ошибка аутентификации: " + error.message + ". Проверьте настройки Firebase и попробуйте снова.");
+                    }
                     tg.close();
                 });
         }
@@ -384,8 +399,7 @@
                     alert("Не удалось сохранить буст: " + error.message);
                 });
         }
-
-        function calculateRealBalance(userId, data) {
+function calculateRealBalance(userId, data) {
             return new Promise(resolve => {
                 try {
                     console.log("Расчёт баланса для пользователя: " + userId);
@@ -736,3 +750,4 @@
     </script>
 </body>
 </html>
+       
